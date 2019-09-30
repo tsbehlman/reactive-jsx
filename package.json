@@ -1,0 +1,25 @@
+{
+  "name": "reactive-jsx",
+  "version": "1.0.0",
+  "description": "A prototype reactive DOM framework with support for JSX",
+  "main": "src/index.js",
+  "directories": {
+    "example": "example"
+  },
+  "dependencies": {
+    "most": "^1.7.3"
+  },
+  "devDependencies": {
+    "jsx-transform": "^2.4.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "example": "node compile.js example/test.jsx"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsbehlman/reactive-jsx.git"
+  },
+  "author": "Trevor Behlman",
+  "license": "MIT"
+}
