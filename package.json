@@ -10,10 +10,13 @@
     "most": "^1.7.3"
   },
   "devDependencies": {
-    "jsx-transform": "^2.4.0"
+    "jsx-transform": "^2.4.0",
+    "rollup": "^1.22.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rollup -c",
+    "watch": "rollup -cw",
     "example": "node compile.js example/test.jsx"
   },
   "repository": {
