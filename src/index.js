@@ -1,6 +1,6 @@
 import makeChildNode from "./make-child-node.js";
 
-export function factory( component, props, children = [] ) {
+export function factory( component, props, ...children ) {
 	if( props == null ) {
 		props = {};
 	}
