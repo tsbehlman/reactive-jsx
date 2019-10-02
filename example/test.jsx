@@ -1,22 +1,5 @@
 const { Text } = Reactive;
 
-function repeater( callback ) {
-	return n => ( new Array( n ) ).fill( undefined ).map( ( v, i ) => callback( i ) );
-}
-
-function randomRepeater( callback ) {
-	return n => repeater( callback )( Math.round( Math.random() * n ) );
-}
-
-function randomCharacter() {
-	return String.fromCharCode( Math.round( Math.random() * ( 127 - 33 ) ) + 33 );
-}
-
-function pulse( period ) {
-	return t => ( Math.cos( t * 2 * Math.PI / period ) + 1 ) / 2;
-}
-
-
 export default function TestComponent() {
 	let [ counter, setCounter ] = Reactive.useState( 1 );
 	counter = counter.map( i => Math.max( 1, i ) ).multicast();
@@ -41,4 +24,21 @@ export default function TestComponent() {
 			</ul>
 		</>
 	);
+}
+
+function repeater( callback ) {
+	return n => ( new Array( n ) ).fill( undefined ).map( ( v, i ) => callback( i ) );
+}
+
+function randomRepeater( callback ) {
+	const repeaterForCallback = repeater( callback );
+	return n => repeaterForCallback( Math.round( Math.random() * n ) );
+}
+
+function randomCharacter() {
+	return String.fromCharCode( Math.round( Math.random() * ( 127 - 33 ) + 33 ) );
+}
+
+function pulse( period ) {
+	return t => ( Math.cos( t * 2 * Math.PI / period ) + 1 ) / 2;
 }
