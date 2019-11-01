@@ -23,9 +23,27 @@ function mapStreamObjectToTarget( streamObj, target ) {
 	}
 }
 
+function mapClassesToClassList( classes, classList ) {
+	for( const [ key, value ] of Object.entries( classes ) ) {
+		if( value instanceof most.Stream ) {
+			value.observe( v => {
+				if( !!v ) {
+					classList.add( key );
+				}
+				else {
+					classList.remove( key );
+				}
+			} );
+		}
+		else if( !!value ) {
+			classList.add( key );
+		}
+	}
+}
+
 function Element( tagName, props, children ) {
 	const element = document.createElement( tagName );
-	const { style, dataset, events, ...attributes } = props;
+	const { style, dataset, events, classes, ...attributes } = props;
 
 	mapStreamObjectToTarget( attributes, element );
 	if( style !== undefined ) {
@@ -45,6 +63,10 @@ function Element( tagName, props, children ) {
 		for( const [ eventName, listener ] of Object.entries( events ) ) {
 			element.addEventListener( eventName, listener, false );
 		}
+	}
+	
+	if( classes !== undefined ) {
+		mapClassesToClassList( classes, element.classList );
 	}
 
 	for( const child of children ) {
