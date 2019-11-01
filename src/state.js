@@ -1,35 +1,34 @@
 export function useState( initialValue ) {
 	let value = initialValue;
 
-	let subscriber = undefined;
+	const subscribers = new Set();
 	const stream = most.from( {
 		[Symbol.observable]() {
 			return this;
 		},
-		subscribe( newSubscriber ) {
-			if( subscriber !== undefined ) {
-				throw new Error( "signal only supports one subscriber at a time" );
-			}
-			subscriber = newSubscriber;
+		subscribe( subscriber ) {
+			subscribers.add( subscriber );
 			return {
 				closed: false,
 				unsubscribe() {
 					this.closed = true;
-					subscriber = undefined;
+					subscribers.delete( subscriber );
 				}
 			};
 		}
 	} ).startWith( value );
 
 	function setSignalValue( newValue ) {
-		if( subscriber === undefined ) {
+		if( subscribers.size === 0 ) {
 			throw new Error( "signal has no subscribed streams" );
 		}
 		if( newValue !== undefined && newValue.constructor === Function ) {
 			newValue = newValue( value );
 		}
 		value = newValue;
-		subscriber.next( value );
+		for( const subscriber of subscribers ) {
+			subscriber.next( value );
+		}
 	}
 
 	return [ stream, setSignalValue ];
