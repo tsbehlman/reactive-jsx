@@ -43,7 +43,7 @@ function mapClassesToClassList( classes, classList ) {
 
 function Element( tagName, props, children ) {
 	const element = document.createElement( tagName );
-	const { style, dataset, events, classes, ...attributes } = props;
+	const { style, dataset, events, classes, ref, ...attributes } = props;
 
 	mapStreamObjectToTarget( attributes, element );
 	if( style !== undefined ) {
@@ -68,6 +68,10 @@ function Element( tagName, props, children ) {
 	if( classes !== undefined ) {
 		mapClassesToClassList( classes, element.classList );
 	}
+	
+	if( ref !== undefined ) {
+		ref.current = element;
+	}
 
 	for( const child of children ) {
 		element.appendChild( makeChildNode( child ) );
@@ -76,4 +80,5 @@ function Element( tagName, props, children ) {
 }
 
 export * from "./state.js";
+export * from "./ref.js";
 export * from "./components.js";
