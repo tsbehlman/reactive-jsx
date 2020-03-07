@@ -11,9 +11,7 @@ function makeChildObserver( start, end ) {
 		let oldElement = start.nextSibling;
 
 		while( !done && oldElement !== end ) {
-			const nextElement = oldElement.nextSibling;
-			replaceNodeWithChild( parent, value, oldElement );
-			oldElement = nextElement;
+			oldElement = replaceNodeWithChild( parent, value, oldElement ).nextSibling;
 			( { done, value } = valueIterator.next() );
 		}
 
@@ -32,12 +30,17 @@ function makeChildObserver( start, end ) {
 }
 
 function replaceNodeWithChild( parent, newChild, oldNode ) {
-	if( newChild instanceof Node || newChild instanceof most.Stream || oldNode.nodeType !== Node.TEXT_NODE ) {
-		parent.replaceChild( makeChildNode( newChild ), oldNode );
+	let newNode = oldNode;
+	if( newChild !== oldNode ) {
+		if( newChild instanceof Node || newChild instanceof most.Stream || oldNode.nodeType !== Node.TEXT_NODE ) {
+			newNode = makeChildNode( newChild );
+			parent.replaceChild( newNode, oldNode );
+		}
+		else {
+			oldNode.nodeValue = newChild;
+		}
 	}
-	else {
-		oldNode.nodeValue = newChild;
-	}
+	return newNode;
 }
 
 export default function makeChildNode( child ) {
