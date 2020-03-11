@@ -1,4 +1,5 @@
 import makeChildNode from "./make-child-node.js";
+import { getExtensions } from "./extensions.js";
 
 export function factory( component, props, ...children ) {
 	if( props == null ) {
@@ -43,6 +44,11 @@ function mapClassesToClassList( classes, classList ) {
 
 function Element( tagName, props, children ) {
 	const element = document.createElement( tagName );
+	
+	for( const extension of getExtensions() ) {
+		props = extension( props );
+	}
+	
 	const { style, dataset, events, classes, ref, ...attributes } = props;
 
 	mapStreamObjectToTarget( attributes, element );
@@ -79,6 +85,7 @@ function Element( tagName, props, children ) {
 	return element;
 }
 
+export { withExtensions } from "./extensions.js";
 export * from "./state.js";
 export * from "./ref.js";
 export * from "./components.js";
