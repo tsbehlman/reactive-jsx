@@ -61,7 +61,7 @@ function Element( tagName, props, children ) {
 
 	if( events !== undefined ) {
 		for( const [ eventName, listener ] of Object.entries( events ) ) {
-			element.addEventListener( eventName, listener, false );
+			listener && element.addEventListener( eventName, listener, false );
 		}
 	}
 	
