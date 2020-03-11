@@ -9,6 +9,7 @@ export function useSignal( initialValue ) {
 		},
 		subscribe( subscriber ) {
 			subscribers.add( subscriber );
+			subscriber.next( value );
 			return {
 				closed: false,
 				unsubscribe() {
@@ -17,7 +18,7 @@ export function useSignal( initialValue ) {
 				}
 			};
 		}
-	} ).startWith( value );
+	} );
 	
 	let signal = stream.tap( newValue => {
 		value = newValue;
