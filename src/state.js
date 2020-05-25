@@ -1,57 +1,33 @@
-export function useSignal( initialValue ) {
-	let value = initialValue;
+import { makeObservable } from "./observableUtils.js";
 
-	const subscribers = new Set();
-	
-	let stream = most.from( {
-		[Symbol.observable]() {
-			return this;
-		},
-		subscribe( subscriber ) {
-			subscribers.add( subscriber );
-			subscriber.next( value );
-			return {
-				closed: false,
-				unsubscribe() {
-					this.closed = true;
-					subscribers.delete( subscriber );
-				}
-			};
+function passthrough( value ) {
+	return value;
+}
+
+export function useSignal( initialValue ) {
+	const [ signal, dispatch, get ] = makeObservable();
+
+	let extension = passthrough;
+
+	signal.get = get;
+
+	signal.set = function setValue( newValue ) {
+		if( typeof newValue === "function" ) {
+			newValue = newValue( get() );
 		}
-	} );
-	
-	let signal = stream.tap( newValue => {
-		value = newValue;
-	} );
-	
-	signal.get = function getSignalValue() {
-		return value;
+		
+		dispatch( extension( newValue ) );
 	};
 	
-	signal.set = function setSignalValue( newValue ) {
-		if( subscribers.size === 0 ) {
-			throw new Error( "signal has no subscribed streams" );
-		}
-		if( newValue !== undefined && newValue.constructor === Function ) {
-			newValue = newValue( value );
-		}
-		for( const subscriber of subscribers ) {
-			subscriber.next( newValue );
-		}
-	};
+	signal.extend = function( newExtension ) {
+		const oldExtension = extension;
+		extension = function( value ) {
+			return newExtension( oldExtension( value ) );
+		};
+		return signal;
+	}
 	
-	signal.extend = function( extender ) {
-		const newStream = extender( signal );
-		const newSignal = newStream.tap( newValue => {
-			value = newValue;
-		} );
-		newSignal.get = signal.get;
-		newSignal.set = signal.set;
-		newSignal.extend = signal.extend;
-		stream = newStream;
-		signal = newSignal;
-		return newSignal;
-	};
+	dispatch( initialValue );
 
 	return signal;
 }

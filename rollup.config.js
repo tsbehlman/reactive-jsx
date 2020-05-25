@@ -1,4 +1,5 @@
 import babel from "rollup-plugin-babel";
+import resolve from "@rollup/plugin-node-resolve";
 
 module.exports = [
 	{
@@ -7,8 +8,7 @@ module.exports = [
 			file: "example/bundle.js",
 			format: "iife",
 			name: "Reactive",
-			sourcemap: true,
-			sourcemapExcludeSources: true
+			sourcemap: false
 		}
 	},
 	{
@@ -17,10 +17,10 @@ module.exports = [
 			file: "./example/test.js",
 			format: "iife",
 			name: "TestComponent",
-			sourcemap: true,
-			sourcemapExcludeSources: true
+			sourcemap: false
 		},
 		plugins: [
+			resolve(),
 			babel( {
 				plugins: [
 					[ "@babel/plugin-transform-react-jsx", {

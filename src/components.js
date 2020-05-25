@@ -1,4 +1,5 @@
-import makeChildNode from "./make-child-node.js";
+import makeChildNode from "./makeChildNode.js";
+import { subscribeForDOM, isObservable } from "./observableUtils.js";
 
 export function Fragment( props, children ) {
 	const fragment = document.createDocumentFragment();
@@ -9,9 +10,9 @@ export function Fragment( props, children ) {
 }
 
 export function Text( { nodeValue = "" }, children ) {
-	if( nodeValue instanceof most.Stream ) {
+	if( isObservable( nodeValue ) ) {
 		const node = document.createTextNode( "" );
-		nodeValue.observe( value => node.nodeValue = value );
+		subscribeForDOM( value => node.nodeValue = value, nodeValue );
 		return node;
 	}
 	else {

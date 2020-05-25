@@ -1,8 +1,10 @@
-const { Text, useSignal } = Reactive;
+import * as Reactive from "../";
+import { Text } from "../";
+import { useSignal } from "../src/state";
+import { map } from "../src/observable";
 
 export default function TestComponent() {
-	const counter = useSignal( 1 )
-		.extend( stream => stream.map( i => Math.max( 1, i ) ) );
+	const counter = useSignal( 1 ).extend( i => Math.max( 1, i ) );
 	
 	const bold = useSignal( false );
 	const italic = useSignal( false );
@@ -10,27 +12,27 @@ export default function TestComponent() {
 	return (
 		<>
 			<button events={{ click: e => counter.set( i => i - 1 ) }}>-</button>
-			<code className="counter-label" classes={{ bold, italic }} dataset={{ content: counter }}>
+			<code className="counter-label" dataset={{ content: counter }}>
 				<Text nodeValue={ counter }/>
 			</code>
 			<button events={{ click: e => counter.set( i => i + 1 ) }}>+</button>
 			<button events={{ click: e => counter.set( i => 1 ) }}>Reset</button>
 			<hr/>
 			<label>
-				<input type="checkbox" events={{ change: toggle( bold ) }} checked={ bold }/> bold
+				<input type="checkbox" events={{ change: toggle( bold ) }} checked={ bold.get() }/> bold
 			</label>
 			<label>
-				<input type="checkbox" events={{ change: toggle( italic ) }} checked={ italic }/> italic
+				<input type="checkbox" events={{ change: toggle( italic ) }} checked={ italic.get() }/> italic
 			</label>
 			<hr/>
-			<code style={{ opacity: counter.map( pulse( 10 ) ) }}>
-				{ counter.map( repeater( randomCharacter ) ) }
+			<code style={{ opacity: map( pulse( 10 ), counter ) }} classes={{ bold, italic }}>
+				{ map( repeater( randomCharacter ), counter ) }
 			</code>
 			<hr/>
 			<ul>
-				{ counter.map( randomRepeater( value => (
+				{ map( randomRepeater( value => (
 					<li>{ value + 1 }</li>
-				) ) ) }
+				) ), counter ) }
 			</ul>
 		</>
 	);

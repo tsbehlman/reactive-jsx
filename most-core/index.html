@@ -1,0 +1,40 @@
+<style>
+	html {
+		font-family: -apple-system, sans-serif;
+		font-size: 13px;
+	}
+
+	button, input {
+		font-family: inherit;
+		font-size: inherit;
+	}
+
+	.counter-label {
+		display: inline-block;
+		min-width: 5ch;
+		text-align: center;
+	}
+</style>
+<script src="./prelude.js"></script>
+<script src="./scheduler.js"></script>
+<script src="./core.js"></script>
+<body> </body>
+<script>
+	function makeCounter( initialValue = 0 ) {
+		let i = initialValue;
+		return function counter() {
+			return i += 1;
+		}
+	}
+	
+	const { runEffects, map, tap, periodic } = mostCore;
+	const { newDefaultScheduler } = mostScheduler;
+	
+	const textNode = document.body.firstChild;
+	
+	const counter = map( makeCounter(), periodic( 1000 ) );
+	
+	const render = tap( value => textNode.nodeValue = String( value ), counter );
+	
+	runEffects( render, newDefaultScheduler() );
+</script>
