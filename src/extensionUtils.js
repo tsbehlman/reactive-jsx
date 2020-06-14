@@ -1,12 +1,16 @@
 import { subscribeForDOM, isObservable } from "./observableUtils.js";
 
-export function mapStreamObjectToTarget( streamObj, target ) {
+export function mapStreamObject( streamObj, setValueCallback ) {
 	for( const [ key, value ] of Object.entries( streamObj ) ) {
 		if( isObservable( value ) ) {
-			subscribeForDOM( v => target[ key ] = v, value );
+			subscribeForDOM( v => setValueCallback( key, v ), value );
 		}
 		else {
-			target[ key ] = value;
+			setValueCallback( key, value );
 		}
 	}
+}
+
+export function mapStreamObjectToTarget( streamObj, target ) {
+	mapStreamObject( streamObj, ( key, value ) => target[ key ] = value );
 }

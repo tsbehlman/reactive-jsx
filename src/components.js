@@ -1,12 +1,7 @@
-import makeChildNode from "./makeChildNode.js";
 import { subscribeForDOM, isObservable } from "./observableUtils.js";
 
 export function Fragment( props, children ) {
-	const fragment = document.createDocumentFragment();
-	for( const child of children ) {
-		fragment.appendChild( makeChildNode( child ) );
-	}
-	return fragment;
+	return children;
 }
 
 export function Text( { nodeValue = "" }, children ) {

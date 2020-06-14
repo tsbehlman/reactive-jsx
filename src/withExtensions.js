@@ -6,10 +6,10 @@ export function getExtensions() {
 
 export function withExtensions( ...customExtensions ) {
 	return function( component ) {
-		return function( ...args ) {
+		return function() {
 			const oldExtensions = currentExtensions;
 			currentExtensions = customExtensions;
-			const returnValue = component( ...args );
+			const returnValue = component.apply( this, arguments );
 			currentExtensions = oldExtensions;
 			return returnValue;
 		}

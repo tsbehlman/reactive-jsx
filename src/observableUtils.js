@@ -1,3 +1,5 @@
+import { cleanupSubscription } from "./cleanup.js";
+
 export function isObservable( object ) {
 	return object && object[ Symbol.observable ];
 }
@@ -45,7 +47,7 @@ export function makeObservable( setup ) {
 	];
 }
 
-let subscriptions;
+let recordedSubscriptions;
 
 export function subscribe( next, observable ) {
 	return observable[Symbol.observable]().subscribe( { next } );
@@ -53,16 +55,6 @@ export function subscribe( next, observable ) {
 
 export function subscribeForDOM( next, observable ) {
 	const subscription = subscribe( next, observable );
-	subscriptions && subscriptions.push( subscription );
+	cleanupSubscription( subscription );
 	return subscription;
-}
-
-export function recordSubscriptions() {
-	subscriptions = [];
-}
-
-export function collectSubscriptions() {
-	const collectedSubscriptions = subscriptions;
-	subscriptions = undefined;
-	return subscriptions;
 }

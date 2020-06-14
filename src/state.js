@@ -27,6 +27,8 @@ export function useSignal( initialValue ) {
 		return signal;
 	}
 	
+	signal.toJSON = get;
+	
 	dispatch( initialValue );
 
 	return signal;

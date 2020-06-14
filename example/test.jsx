@@ -12,7 +12,7 @@ export default function TestComponent() {
 	return (
 		<>
 			<button events={{ click: e => counter.set( i => i - 1 ) }}>-</button>
-			<code className="counter-label" dataset={{ content: counter }}>
+			<code className="counter-label"  classes={{ bold, italic }} dataset={{ content: counter }}>
 				<Text nodeValue={ counter }/>
 			</code>
 			<button events={{ click: e => counter.set( i => i + 1 ) }}>+</button>
@@ -25,7 +25,7 @@ export default function TestComponent() {
 				<input type="checkbox" events={{ change: toggle( italic ) }} checked={ italic.get() }/> italic
 			</label>
 			<hr/>
-			<code style={{ opacity: map( pulse( 10 ), counter ) }} classes={{ bold, italic }}>
+			<code style={{ opacity: map( pulse( 10 ), counter ) }}>
 				{ map( repeater( randomCharacter ), counter ) }
 			</code>
 			<hr/>
@@ -37,6 +37,8 @@ export default function TestComponent() {
 		</>
 	);
 }
+
+Reactive.render( <TestComponent />, document.body );
 
 function repeater( callback ) {
 	return n => ( new Array( n ) ).fill( undefined ).map( ( v, i ) => callback( i ) );
