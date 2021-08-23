@@ -89,8 +89,6 @@ export function combineArray( combiner, sources ) {
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
 	} );
 	
-	dispatch( [] );
-	
 	return sink;
 }
 
@@ -126,4 +124,4 @@ export function switchLatest( source ) {
 	return sink;
 }
 
-export { subscribe } from "./observableUtils.js";
+export { subscribeForDOM as subscribe, isObservable } from "./observableUtils.js";

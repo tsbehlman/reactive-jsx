@@ -1,5 +1,6 @@
 import babel from "rollup-plugin-babel";
 import resolve from "@rollup/plugin-node-resolve";
+const reactive = require( "./makeBabelPlugin" );
 
 module.exports = [
 	{
@@ -8,7 +9,7 @@ module.exports = [
 			file: "example/bundle.js",
 			format: "iife",
 			name: "Reactive",
-			sourcemap: false
+			sourcemap: true
 		}
 	},
 	{
@@ -23,10 +24,9 @@ module.exports = [
 			resolve(),
 			babel( {
 				plugins: [
-					[ "@babel/plugin-transform-react-jsx", {
-						pragma: "Reactive.factory",
-						pragmaFrag: "Reactive.Fragment",
-					} ]
+					reactive( {
+						moduleName: "../src/index.js",
+					} )
 				]
 			} )
 		]

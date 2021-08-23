@@ -1,22 +1,26 @@
-if( Symbol.observable === undefined ) {
-	Symbol.observable = Symbol( "observable" );
+import { createComponent } from "./render.js";
+import { mountElement } from "./mount.js";
+
+export function template( html, wrappedContent ) {
+	const templateElement = document.createElement( "template" );
+	templateElement.innerHTML = html;
+	const node = templateElement.content.firstChild;
+	return wrappedContent ? node.firstChild : node;
+};
+
+export function fragment( html ) {
+	const templateElement = document.createElement( "template" );
+	templateElement.innerHTML = html;
+	return templateElement.content;
 }
 
-import { Element } from "./render.js";
-
-export function render( component, parent ) {
-	const rendered = component.render();
-	parent.appendChild( rendered );
-}
-
-export function factory( component, props, ...children ) {
-	if( props == null ) {
-		props = {};
-	}
-	return new Element( component, props, children );
+export function render( component, props, parent ) {
+	const element = createComponent( component, props );
+	mountElement( parent, element, undefined, true );
 }
 
 export { withExtensions } from "./withExtensions.js";
-export { cleanup } from "./cleanup.js";
+export { onMount, onUnmount } from "./mount.js";
 export * from "./components.js";
-export { Element } from "./render.js";
+export * from "./render.js";
+export { applyRef } from "./ref.js";

@@ -1,29 +1,25 @@
-import * as Reactive from "../";
-import { Text } from "../";
+import { render, onMount } from "../src";
 import { useSignal } from "../src/state";
-import { map } from "../src/observable";
+//import { createRef } from "../src/ref";
+import { map, combineArray } from "../src/observable";
 
 export default function TestComponent() {
 	const counter = useSignal( 1 ).extend( i => Math.max( 1, i ) );
 	
-	const bold = useSignal( false );
-	const italic = useSignal( false );
+	// <button events={{ click: e => counter.set( i => i - 1 ) }}>-</button>
 	
 	return (
 		<>
-			<button events={{ click: e => counter.set( i => i - 1 ) }}>-</button>
-			<code className="counter-label"  classes={{ bold, italic }} dataset={{ content: counter }}>
+			<button onclick={ e => counter.set( i => i - 1 ) }>-</button>
+			<code className="counter-label" dataset={{ content: counter }}>
 				<Text nodeValue={ counter }/>
 			</code>
-			<button events={{ click: e => counter.set( i => i + 1 ) }}>+</button>
-			<button events={{ click: e => counter.set( i => 1 ) }}>Reset</button>
+			<button onclick={ e => counter.set( i => i + 1 ) }>+</button>
+			<button onclick={ e => counter.set( i => 1 ) }>Reset</button>
 			<hr/>
-			<label>
-				<input type="checkbox" events={{ change: toggle( bold ) }} checked={ bold.get() }/> bold
-			</label>
-			<label>
-				<input type="checkbox" events={{ change: toggle( italic ) }} checked={ italic.get() }/> italic
-			</label>
+			<Timer />
+			<hr/>
+			<Moons phase={ map( value => ( value / 6 ) % ( 2 * Math.PI ), counter ) }/>
 			<hr/>
 			<code style={{ opacity: map( pulse( 10 ), counter ) }}>
 				{ map( repeater( randomCharacter ), counter ) }
@@ -38,7 +34,97 @@ export default function TestComponent() {
 	);
 }
 
-Reactive.render( <TestComponent />, document.body );
+function Moons( { phase } ) {
+	return (
+		<svg width="96px" height="48px" viewBox="0 0 2 1">
+			<Moon phase={ phase } position="0.5 0"/>
+			<Moon phase={ map( phase => Math.PI - phase, phase ) } position="1.5 0"/>
+		</svg>
+	);
+}
+
+function Moon( { phase, position } ) {
+	const leftRadius  = map( phase => Math.cos( Math.min( phase, Math.PI ) ) / 2, phase );
+	const rightRadius = map( phase => Math.cos( Math.max( phase, Math.PI ) ) / 2, phase );
+	
+	const leftSweepFlag  = map( leftRadius  => Number( leftRadius  > 0 ), leftRadius  );
+	const rightSweepFlag = map( rightRadius => Number( rightRadius > 0 ), rightRadius );
+	
+	onMount( () => {
+		console.log( `moon path mounted at position ${ position }` );
+	} );
+	
+	const path = combineArray( ( leftRadius, leftSweepFlag, rightRadius, rightSweepFlag ) =>
+		`M${ position }` +
+		`a${ leftRadius  } 0.5,0 0 ${ leftSweepFlag  },0 1` +
+		`a${ rightRadius } 0.5,0 0 ${ rightSweepFlag },0-1`,
+		[ leftRadius, leftSweepFlag, rightRadius, rightSweepFlag ] );
+	
+	return <path style="fill:#000" d={ path } />;
+}
+
+function Timer() {
+	const showTimer = useSignal( false );
+	
+	return (
+		<>
+			<label>
+				<input type="checkbox" events={{ change: toggle( showTimer ) }} checked={ showTimer.get() }/> show timer
+			</label>
+			{ map( showTimer => showTimer && <TimerContent />, showTimer ) }
+		</>
+	);
+}
+
+function TimerContent() {
+	const bold = useSignal( false );
+	const italic = useSignal( true );
+	
+	//const timerRef = createRef();
+	
+	const time = useSignal( "" );
+	
+	onMount( () => {
+		console.log( "timer mounted" );
+		
+		let frameRequest = -1;
+		
+		function frame() {
+			time.set( formatTime( new Date() ) );
+			frameRequest = requestAnimationFrame( frame );
+		}
+		
+		frame();
+		
+		return () => {
+			console.log( "timer unmounted" );
+			cancelAnimationFrame( frameRequest );
+		};
+	} );
+	
+	return (
+		<>
+			<p classList={{ bold, italic }}><Text nodeValue={ time } /></p>
+			<label>
+				<input type="checkbox" onchange={ toggle( bold ) } checked={ bold.get() }/> bold
+			</label>
+			<label>
+				<input type="checkbox" onchange={ toggle( italic ) } checked={ italic.get() }/> italic
+			</label>
+		</>
+	);
+}
+
+function leftPad( padding, value ) {
+	return ( padding + String( value ) ).slice( -padding.length );
+}
+
+function formatTime( date ) {
+	const n = value => leftPad( "00", value );
+	return `${ leftPad( "00", date.getHours() ) }:${ leftPad( "00", date.getMinutes() ) }:${ leftPad( "00", date.getSeconds() ) }.${ leftPad( "000", date.getMilliseconds() ) }`;
+}
+
+render( TestComponent, {}, document.body );
 
 function repeater( callback ) {
 	return n => ( new Array( n ) ).fill( undefined ).map( ( v, i ) => callback( i ) );

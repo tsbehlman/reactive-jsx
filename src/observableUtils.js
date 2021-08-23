@@ -1,4 +1,8 @@
-import { cleanupSubscription } from "./cleanup.js";
+import { registerSubscription } from "./mount.js";
+
+if( Symbol.observable === undefined ) {
+	Symbol.observable = Symbol( "observable" );
+}
 
 export function isObservable( object ) {
 	return object && object[ Symbol.observable ];
@@ -47,14 +51,36 @@ export function makeObservable( setup ) {
 	];
 }
 
-let recordedSubscriptions;
-
 export function subscribe( next, observable ) {
 	return observable[Symbol.observable]().subscribe( { next } );
 }
 
 export function subscribeForDOM( next, observable ) {
 	const subscription = subscribe( next, observable );
-	cleanupSubscription( subscription );
+	registerSubscription( subscription );
 	return subscription;
+}
+
+export function mapStream( stream, setValueCallback ) {
+	if( isObservable( stream ) ) {
+		subscribeForDOM( setValueCallback, stream );
+	}
+	else {
+		setValueCallback( stream );
+	}
+}
+
+export function mapStreamObject( streamObj, setValueCallback ) {
+	for( const [ key, value ] of Object.entries( streamObj ) ) {
+		if( isObservable( value ) ) {
+			subscribeForDOM( v => setValueCallback( key, v ), value );
+		}
+		else {
+			setValueCallback( key, value );
+		}
+	}
+}
+
+export function mapStreamObjectToTarget( streamObj, target ) {
+	mapStreamObject( streamObj, ( key, value ) => target[ key ] = value );
 }

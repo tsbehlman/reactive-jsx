@@ -1,8 +1,5 @@
 import { makeObservable } from "./observableUtils.js";
-
-function passthrough( value ) {
-	return value;
-}
+import { passthrough } from "./utils.js";
 
 export function useSignal( initialValue ) {
 	const [ signal, dispatch, get ] = makeObservable();
@@ -11,12 +8,12 @@ export function useSignal( initialValue ) {
 
 	signal.get = get;
 
-	signal.set = function setValue( newValue ) {
-		if( typeof newValue === "function" ) {
-			newValue = newValue( get() );
+	signal.set = function setValue( value ) {
+		if( typeof value === "function" ) {
+			value = value( get() );
 		}
 		
-		dispatch( extension( newValue ) );
+		dispatch( extension( value ) );
 	};
 	
 	signal.extend = function( newExtension ) {

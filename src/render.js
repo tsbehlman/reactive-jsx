@@ -1,84 +1,81 @@
-import { getExtensions } from "./withExtensions.js";
-import { mapStreamObjectToTarget, mapStreamObject } from "./extensionUtils.js";
-import { subscribeForDOM, isObservable } from "./observableUtils.js";
-import { withCurrentCleanupContext, withNewCleanupContext, cleanupElement } from "./cleanup.js";
+import { subscribeForDOM, isObservable, mapStream, mapStreamObjectToTarget, mapStreamObject } from "./observableUtils.js";
+import { wrapNewMountedContext, mountElement, unmountElement } from "./mount.js";
+import { applyRef } from "./ref.js";
 
-export class Element {
-	constructor( component, props, children ) {
-		this.component = component;
-		this.props = props;
-		this.children = children;
-		this.extensions = getExtensions();
-		this.node = undefined;
+export function createComponent( component, props, children ) {
+	return wrapNewMountedContext( () => renderChild( component( props, children ) ) )();
+}
+
+export function insert( parentNode, child, markerNode ) {
+	const childNode = renderChild( child );
+	if( childNode === undefined ) {
+		return;
 	}
+	mountElement( parentNode, childNode, markerNode );
+}
 
-	render() {
-		if( this.node === undefined ) {
-			if( this.component.constructor === String ) {
-				this.node = renderNode( this.component, this.props, this.children, this.extensions );
-			}
-			else {
-				this.node = renderChild( this.component( this.props, this.children ) );
-			}
-		}
-		
-		return this.node;
+export function assignToElement( value, setter ) {
+	if( isObservable( value ) ) {
+		subscribeForDOM( setter, value );
+	}
+	else {
+		setter( value );
 	}
 }
 
-function renderNode( tagName, props, children, extensions ) {
-	const element = document.createElement( tagName );
+export function spread( element, props, isSVG ) {
+	const { style, dataset, events, classList, ref, ...attributes } = props;
 	
-	for( const extension of extensions ) {
-		props = extension( props, element );
+	if( isSVG ) {
+		mapStreamObject( attributes, ( key, value ) => element.setAttribute( key, value ) );
+	}
+	else {
+		mapStreamObjectToTarget( attributes, element );
 	}
 	
-	const { style, dataset, events, classes, ref, ...attributes } = props;
+	style && applyStyle( element, style );
 	
-	mapStreamObjectToTarget( attributes, element );
+	dataset && applyDataset( element, dataset );
 	
-	if( style !== undefined ) {
-		if( style.constructor === String ) {
-			element.style.cssText = style;
+	events && applyEvents( element, events );
+	
+	classList && applyClassList( element, classList );
+	
+	ref && applyRef( element, ref );
+}
+
+export function applyClassList( element, classList ) {
+	mapStreamObject( classList, function toggleClassName( className, shouldAdd ) {
+		if( !!shouldAdd ) {
+			element.classList.add( className );
 		}
 		else {
-			mapStreamObjectToTarget( style, element.style );
+			element.classList.remove( className );
 		}
+	} );
+}
+
+export function applyStyle( element, style ) {
+	if( style.constructor === String ) {
+		element.style.cssText = style;
 	}
-	
-	if( dataset !== undefined ) {
-		mapStreamObjectToTarget( dataset, element.dataset );
+	else {
+		mapStreamObjectToTarget( style, element.style );
 	}
-	
-	if( events !== undefined ) {
-		for( const [ eventName, listener ] of Object.entries( events ) ) {
-			listener && element.addEventListener( eventName, listener, false );
-		}
+}
+
+export function applyDataset( element, dataset ) {
+	mapStreamObjectToTarget( dataset, element.dataset );
+}
+
+export function applyEvents( element, events ) {
+	for( const [ eventName, listener ] of Object.entries( events ) ) {
+		listener && element.addEventListener( eventName, listener, false );
 	}
-	
-	if( classes !== undefined ) {
-		mapStreamObject( classes, function toggleClassName( className, shouldAdd ) {
-			if( !!shouldAdd ) {
-				element.classList.add( className );
-			}
-			else {
-				element.classList.remove( className );
-			}
-		} );
-	}
-	
-	if( ref !== undefined ) {
-		ref.current = element;
-	}
-	
-	for( const child of children ) {
-		element.appendChild( renderChild( child ) );
-	}
-	return element;
 }
 
 function makeChildObserver( start, end ) {
-	return withCurrentCleanupContext( function childObserver( streamValue ) {
+	return function childObserver( streamValue ) {
 		if( !Array.isArray( streamValue ) ) {
 			streamValue = [ streamValue ];
 		}
@@ -92,10 +89,14 @@ function makeChildObserver( start, end ) {
 		// swap existing elements for the new ones
 		while( !done && oldElement !== end ) {
 			const newElement = makeOptionalChildNode( value );
-			if( newElement !== oldElement ) {
-				parent.replaceChild( newElement, oldElement );
+			if( newElement === undefined ) {
+				// ignore
+			}
+			else if( newElement !== oldElement ) {
+				mountElement( parent, newElement, oldElement );
+				//parent.replaceChild( newElement, oldElement );
 				// move the replaced element to the end where it will be
-				// considered for removal and cleanup
+				// considered for removal and unmount
 				parent.insertBefore( oldElement, end );
 				oldElement = newElement.nextSibling;
 			}
@@ -108,18 +109,20 @@ function makeChildObserver( start, end ) {
 		// add remaining new elements
 		while( !done ) {
 			const newElement = makeOptionalChildNode( value );
-			parent.insertBefore( newElement, end );
+			if( newElement !== undefined ) {
+				mountElement( parent, newElement, end );
+			}
 			( { done, value } = valueIterator.next() );
 		}
 
 		// remove remaining old elements
 		while( oldElement !== end ) {
 			const nextElement = oldElement.nextSibling;
-			cleanupElement( oldElement );
+			unmountElement( oldElement );
 			parent.removeChild( oldElement );
 			oldElement = nextElement;
 		}
-	} );
+	};
 }
 
 function replaceNodeWithChild( parent, newChild, oldNode ) {
@@ -132,15 +135,16 @@ function replaceNodeWithChild( parent, newChild, oldNode ) {
 }
 
 function makeOptionalChildNode( child ) {
-	return withNewCleanupContext( renderChild )( child );
+	return renderChild( child );
 }
 
 function renderChild( value ) {
+	if( value === undefined || value === false || value === null ) {
+		return undefined;
+	}
+	
 	if( value instanceof Node ) {
 		return value;
-	}
-	else if( value instanceof Element ) {
-		return value.render();
 	}
 	else if( isObservable( value ) ) {
 		const fragment = document.createDocumentFragment();
@@ -152,11 +156,17 @@ function renderChild( value ) {
 		return fragment;
 	}
 	else if( Array.isArray( value ) ) {
-		const fragment = document.createDocumentFragment();
+		console.error("rendering array child");
+		return undefined;
+		/*const fragment = document.createDocumentFragment();
 		for( const child of value ) {
-			fragment.appendChild( renderChild( child ) );
+			const childNode = renderChild( child );
+			if( childNode !== undefined ) {
+				fragment.appendChild( childNode );
+				//mountElement( childNode );
+			}
 		}
-		return fragment;
+		return fragment;*/
 	}
 	else {
 		return document.createTextNode( value );

@@ -1,5 +1,5 @@
 {
-  "name": "reactive-jsx",
+  "name": "reactive",
   "version": "1.0.0",
   "description": "A prototype reactive DOM framework with support for JSX",
   "main": "src/index.js",
@@ -13,6 +13,7 @@
   "devDependencies": {
     "@babel/core": "^7.9.0",
     "@babel/plugin-transform-react-jsx": "^7.9.1",
+    "babel-plugin-transform-rename-import": "^2.3.0",
     "rollup": "^2.1.0",
     "rollup-plugin-babel": "^4.4.0"
   },
