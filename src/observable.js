@@ -7,7 +7,7 @@ export function tap( sideEffect, source ) {
 			dispatch( value );
 		}, source );
 		
-		return subscription.unsubscribe();
+		return () => subscription.unsubscribe();
 	} );
 
 	return sink;
@@ -117,7 +117,6 @@ export function switchLatest( source ) {
 		
 		return () => {
 			currentSubscription && currentSubscription.unsubscribe();
-			subscription.unsubscribe();
 		};
 	} );
 	
