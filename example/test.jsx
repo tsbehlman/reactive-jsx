@@ -19,7 +19,7 @@ export default function TestComponent() {
 			<hr/>
 			<Timer />
 			<hr/>
-			<Moons phase={ map( value => ( value / 6 ) % ( 2 * Math.PI ), counter ) }/>
+			<Moons phase={ map( value => ( ( value - 1 ) / 6 ) % ( 2 * Math.PI ), counter ) }/>
 			<hr/>
 			<code style={{ opacity: map( pulse( 10 ), counter ) }}>
 				{ map( repeater( randomCharacter ), counter ) }
@@ -37,8 +37,10 @@ export default function TestComponent() {
 function Moons( { phase } ) {
 	return (
 		<svg width="96px" height="48px" viewBox="0 0 2 1">
-			<Moon phase={ phase } position="0.5 0"/>
-			<Moon phase={ map( phase => Math.PI - phase, phase ) } position="1.5 0"/>
+			{ [
+				<Moon phase={ phase } position="0.5 0"/>,
+				<Moon phase={ map( phase => Math.PI - phase, phase ) } position="1.5 0"/>
+			] }
 		</svg>
 	);
 }

@@ -65,8 +65,6 @@ export function combine( combiner, source1, source2 ) {
 }
 
 export function combineArray( combiner, sources ) {
-	let dispatchBuffer = undefined;
-	
 	const [ sink, dispatch ] = makeObservable( function() {
 		const subscriptions = [];
 		const values = [];
@@ -77,11 +75,8 @@ export function combineArray( combiner, sources ) {
 					return;
 				}
 				values[ i ] = value;
-				if( dispatchBuffer === undefined && values.length === sources.length ) {
-					dispatchBuffer = Promise.resolve().then( () => {
-						dispatch( combiner( ...values ) );
-						dispatchBuffer = undefined;
-					} );
+				if( values.length === sources.length ) {
+					dispatch( combiner( ...values ) );
 				}
 			}, sources[ i ] );
 		}
@@ -123,4 +118,4 @@ export function switchLatest( source ) {
 	return sink;
 }
 
-export { subscribeForDOM as subscribe, isObservable } from "./observableUtils.js";
+export { isObservable } from "./observableUtils.js";

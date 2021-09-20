@@ -1,5 +1,4 @@
 import { createComponent } from "./render.js";
-import { mountElement } from "./mount.js";
 
 export function template( html, wrappedContent ) {
 	const templateElement = document.createElement( "template" );
@@ -14,9 +13,10 @@ export function fragment( html ) {
 	return templateElement.content;
 }
 
-export function render( component, props, parent ) {
-	const element = createComponent( component, props );
-	mountElement( parent, element, undefined, true );
+export function render( component, props, parentNode ) {
+	const reactiveNode = createComponent( component, props );
+	reactiveNode.render();
+	reactiveNode.mount( parentNode );
 }
 
 export { withExtensions } from "./withExtensions.js";

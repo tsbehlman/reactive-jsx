@@ -1,17 +1,223 @@
-import { subscribeForDOM, isObservable, mapStream, mapStreamObjectToTarget, mapStreamObject } from "./observableUtils.js";
-import { wrapNewMountedContext, mountElement, unmountElement } from "./mount.js";
+import { subscribe, isObservable } from "./observableUtils.js";
+import { makeMountContext, wrapMountContext, wrapCurrentMountContext, doMount, doUnmount, subscribeForDOM } from "./mount.js";
 import { applyRef } from "./ref.js";
 
+export function mapStream( stream, setValueCallback ) {
+	if( isObservable( stream ) ) {
+		subscribeForDOM( setValueCallback, stream );
+	}
+	else {
+		setValueCallback( stream );
+	}
+}
+
+export function mapStreamObject( streamObj, setValueCallback ) {
+	for( const [ key, value ] of Object.entries( streamObj ) ) {
+		if( isObservable( value ) ) {
+			subscribeForDOM( v => setValueCallback( key, v ), value );
+		}
+		else {
+			setValueCallback( key, value );
+		}
+	}
+}
+
+export function mapStreamObjectToTarget( streamObj, target ) {
+	mapStreamObject( streamObj, ( key, value ) => target[ key ] = value );
+}
+
+class ReactiveNode {
+	constructor() {
+		this.node = null;
+		this.startNode = null;
+		this.endNode = null;
+	}
+	
+	render() {}
+	
+	mount( parentNode, markerNode ) {
+		if( this.node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ) {
+			this.startNode = this.node.firstChild;
+			this.endNode = this.node.lastChild;
+		}
+		if( markerNode ) {
+			parentNode.insertBefore( this.node, markerNode );
+		}
+		else {
+			parentNode.appendChild( this.node );
+		}
+	}
+	
+	unmount() {
+		if( this.node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ) {
+			let currentNode = this.startNode;
+			while( currentNode !== this.endNode ) {
+				let nextNode = currentNode.nextSibling;
+				currentNode.parentNode.removeChild( currentNode );
+				currentNode = nextNode;
+			}
+			this.endNode.parentNode.removeChild( this.endNode );
+		}
+		else {
+			this.node.parentNode.removeChild( this.node );	
+		}
+	}
+}
+
+class ComponentNode extends ReactiveNode {
+	constructor( factory, props, children ) {
+		super();
+		this.factory = factory;
+		this.props = props;
+		this.children = children;
+		this.mountContext = null;
+	}
+	
+	render() {
+		this.mountContext = makeMountContext();
+		this.node = wrapMountContext( this.mountContext, () => this.factory( this.props, this.children ) )();
+	}
+	
+	mount( parentNode, markerNode ) {
+		let firstChild = this.node.firstChild;
+		super.mount( parentNode, markerNode );
+		doMount( this.mountContext );
+	}
+	
+	unmount() {
+		super.unmount();
+		doUnmount( this.mountContext );
+	}
+}
+
+class FragmentNode extends ReactiveNode {
+	constructor() {
+		super();
+	}
+	
+	render() {
+		super.render();
+		this.node = document.createDocumentFragment();
+	}
+}
+
+class ObservableNode extends FragmentNode {
+	constructor( observable ) {
+		super();
+		this.observable = observable;
+		this.children = [];
+		this.subscription = null;
+	}
+	
+	render() {
+		super.render();
+		this.node.appendChild( document.createComment( "" ) );
+		this.node.appendChild( document.createComment( "" ) );
+	}
+	
+	makeChildObserver() {
+		return wrapCurrentMountContext(streamValue => {
+			if( !Array.isArray( streamValue ) ) {
+				streamValue = [ streamValue ];
+			}
+			
+			const parentNode = this.startNode.parentNode;
+			
+			let newChildren = [];
+			let oldChildIndex = 0;
+			let oldReactiveNode = this.children[ oldChildIndex++ ];
+			
+			const valueIterator = streamValue[ Symbol.iterator ]();
+			let { done, value } = valueIterator.next();
+			
+			// swap existing nodes for the new ones
+			while( !done && oldReactiveNode !== undefined ) {
+				const newReactiveNode = makeReactiveNode( value );
+				if( newReactiveNode === undefined ) {
+					// ignore
+				}
+				else if( newReactiveNode !== oldReactiveNode ) {
+					newReactiveNode.render();
+					newReactiveNode.mount( parentNode, oldReactiveNode.node );
+					newChildren.push( newReactiveNode );
+				}
+				else {
+					newChildren.push( oldReactiveNode );
+					oldReactiveNode = this.children[ oldChildIndex++ ];
+				}
+				( { done, value } = valueIterator.next() );
+			}
+	
+			// add remaining new nodes
+			while( !done ) {
+				const newReactiveNode = makeReactiveNode( value );
+				if( newReactiveNode !== undefined ) {
+					newReactiveNode.render();
+					newReactiveNode.mount( parentNode, this.endNode );
+					newChildren.push( newReactiveNode );
+				}
+				( { done, value } = valueIterator.next() );
+			}
+	
+			// remove remaining old nodes
+			while( oldReactiveNode !== undefined ) {
+				oldReactiveNode.unmount();
+				oldReactiveNode = this.children[ oldChildIndex++ ];
+			}
+			
+			this.children = newChildren;
+		});
+	}
+	
+	mount( parentNode, markerNode ) {
+		super.mount( parentNode, markerNode );
+		this.subscription = subscribe( this.makeChildObserver(), this.observable );
+	}
+	
+	unmount() {
+		this.subscription.unsubscribe();
+		super.unmount();
+	}
+}
+
+class ArrayNode extends FragmentNode {
+	constructor( array ) {
+		super();
+		this.array = array;
+	}
+	
+	render() {
+		super.render();
+		for( const item of this.array ) {
+			const reactiveNode = makeReactiveNode( item );
+			reactiveNode.render();
+			reactiveNode.mount( this.node );
+		}
+	}
+}
+
+class DomNode extends ReactiveNode {
+	constructor( node ) {
+		super();
+		this.node = node;
+	}
+}
+
+function isComponentNode( object ) {
+	return object && object.constructor === ComponentNode;
+}
+
 export function createComponent( component, props, children ) {
-	return wrapNewMountedContext( () => renderChild( component( props, children ) ) )();
+	return new ComponentNode( component, props, children );
 }
 
 export function insert( parentNode, child, markerNode ) {
-	const childNode = renderChild( child );
-	if( childNode === undefined ) {
+	const reactiveNode = makeReactiveNode( child );
+	if( reactiveNode === undefined ) {
 		return;
 	}
-	mountElement( parentNode, childNode, markerNode );
+	reactiveNode.render();
+	reactiveNode.mount( parentNode, markerNode );
 }
 
 export function assignToElement( value, setter ) {
@@ -74,101 +280,24 @@ export function applyEvents( element, events ) {
 	}
 }
 
-function makeChildObserver( start, end ) {
-	return function childObserver( streamValue ) {
-		if( !Array.isArray( streamValue ) ) {
-			streamValue = [ streamValue ];
-		}
-		
-		const parent = start.parentNode;
-		let oldElement = start.nextSibling;
-
-		const valueIterator = streamValue[ Symbol.iterator ]();
-		let { done, value } = valueIterator.next();
-
-		// swap existing elements for the new ones
-		while( !done && oldElement !== end ) {
-			const newElement = makeOptionalChildNode( value );
-			if( newElement === undefined ) {
-				// ignore
-			}
-			else if( newElement !== oldElement ) {
-				mountElement( parent, newElement, oldElement );
-				//parent.replaceChild( newElement, oldElement );
-				// move the replaced element to the end where it will be
-				// considered for removal and unmount
-				parent.insertBefore( oldElement, end );
-				oldElement = newElement.nextSibling;
-			}
-			else {
-				oldElement = oldElement.nextSibling;
-			}
-			( { done, value } = valueIterator.next() );
-		}
-
-		// add remaining new elements
-		while( !done ) {
-			const newElement = makeOptionalChildNode( value );
-			if( newElement !== undefined ) {
-				mountElement( parent, newElement, end );
-			}
-			( { done, value } = valueIterator.next() );
-		}
-
-		// remove remaining old elements
-		while( oldElement !== end ) {
-			const nextElement = oldElement.nextSibling;
-			unmountElement( oldElement );
-			parent.removeChild( oldElement );
-			oldElement = nextElement;
-		}
-	};
-}
-
-function replaceNodeWithChild( parent, newChild, oldNode ) {
-	let newNode = oldNode;
-	if( newChild !== oldNode ) {
-		newNode = makeOptionalChildNode( newChild );
-		parent.replaceChild( newNode, oldNode );
-	}
-	return newNode;
-}
-
-function makeOptionalChildNode( child ) {
-	return renderChild( child );
-}
-
-function renderChild( value ) {
+function makeReactiveNode( value ) {
 	if( value === undefined || value === false || value === null ) {
 		return undefined;
 	}
 	
 	if( value instanceof Node ) {
+		return new DomNode( value );
+	}
+	else if( isComponentNode( value ) ) {
 		return value;
 	}
 	else if( isObservable( value ) ) {
-		const fragment = document.createDocumentFragment();
-		const start = document.createComment( "" );
-		const end = document.createComment( "" );
-		fragment.appendChild( start );
-		fragment.appendChild( end );
-		subscribeForDOM( makeChildObserver( start, end ), value );
-		return fragment;
+		return new ObservableNode( value );
 	}
 	else if( Array.isArray( value ) ) {
-		console.error("rendering array child");
-		return undefined;
-		/*const fragment = document.createDocumentFragment();
-		for( const child of value ) {
-			const childNode = renderChild( child );
-			if( childNode !== undefined ) {
-				fragment.appendChild( childNode );
-				//mountElement( childNode );
-			}
-		}
-		return fragment;*/
+		return new ArrayNode( value );
 	}
 	else {
-		return document.createTextNode( value );
+		return new DomNode( document.createTextNode( value ) );
 	}
 }

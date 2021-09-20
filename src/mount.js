@@ -1,146 +1,107 @@
-const rootMountedContext = {
-	inDocument: false,
-	children: new Map(),
-	subscriptions: undefined,
-	mountCallbacks: undefined,
-	unmountCallbacks: undefined
-};
+import { subscribe } from "./observableUtils.js";
+
+export function makeMountContext() {
+	return {
+		inDocument: false,
+		parentContext: null,
+		childContexts: new Set(),
+		mount: {
+			subscriptions: [],
+			callbacks: []
+		},
+		unmount: {
+			subscriptions: [],
+			callbacks: []
+		}
+	};
+}
+
+const rootMountedContext = makeMountContext();
+rootMountedContext.inDocument = true;
 
 let currentMountedContext = rootMountedContext;
 
-window.rootMountedContext = rootMountedContext;
-
 export function onMount( callback ) {
-	const callbacks = currentMountedContext.mountCallbacks;
-	callbacks.push( callback );
+	currentMountedContext.mount.callbacks.push( callback );
 }
 
 export function onUnmount( callback, context = currentMountedContext ) {
-	const callbacks = context.unmountCallbacks;
-	callbacks.push( callback );
+	context.unmount.callbacks.push( callback );
 }
 
-export function registerSubscription( subscription ) {
-	const subscriptions = currentMountedContext.subscriptions;
-	subscriptions.push( subscription );
+export function subscribeForDOM( next, observable ) {
+	currentMountedContext.mount.subscriptions.push( [ next, observable ] );
 }
 
-export function wrapCurrentMountedContext( callback ) {
-	const mountedContext = currentMountedContext;
+export function wrapMountContext( context, callback ) {
 	return function() {
+		currentMountedContext.childContexts.add( context );
+		context.parentContext = currentMountedContext;
 		const oldMountedContext = currentMountedContext;
-		currentMountedContext = mountedContext;
+		currentMountedContext = context;
 		let returnValue = callback.apply( this, arguments );
 		currentMountedContext = oldMountedContext;
 		return returnValue;
 	}
 }
 
-export function wrapNewMountedContext( callback ) {
+export function wrapCurrentMountContext( callback ) {
+	const context = currentMountedContext;
 	return function() {
-		const parentMountedContext = currentMountedContext;
-		currentMountedContext = {
-			inDocument: false,
-			children: new Map(),
-			subscriptions: [],
-			mountCallbacks: [],
-			unmountCallbacks: []
-		};
-
-		const newElement = callback.apply( this, arguments );
-		if( newElement !== undefined ) {
-			if( newElement.nodeType === Node.DOCUMENT_FRAGMENT_NODE ) {
-				let currentNode = newElement.firstChild;
-				while( currentNode && currentNode.nodeType !== Node.COMMENT_NODE ) {
-					currentNode = currentNode.nextSibling;
-				}
-				parentMountedContext.children.set( newElement.firstChild, currentMountedContext );
-			}
-			parentMountedContext.children.set( newElement, currentMountedContext );
-		}
-		
-		currentMountedContext = parentMountedContext;
-
-		return newElement;
+		const oldMountedContext = currentMountedContext;
+		currentMountedContext = context;
+		let returnValue = callback.apply( this, arguments );
+		currentMountedContext = oldMountedContext;
+		return returnValue;
 	}
 }
 
-// TODO what if it never gets mounted?  do the streams leak?
-export function mountElement( parentNode, element, markerNode ) {
-	let contextToMount = currentMountedContext.children.get( element );
-	if( contextToMount === undefined ) {
-		contextToMount = rootMountedContext.children.get( element )
-		if( contextToMount !== undefined ) {
-			if( element.nodeType === Node.DOCUMENT_FRAGMENT_NODE ) {
-				rootMountedContext.children.delete( element );
-				parentContext.children.set( element.firstChild, contextToMount );
-			}
-			else {
-				currentMountedContext.children.set( element, contextToMount );
-			}
-		}
-	}
-	
-	if( contextToMount !== undefined && element.nodeType === Node.DOCUMENT_FRAGMENT_NODE ) {
-		currentMountedContext.children.delete( element );
-		currentMountedContext.children.set( element.firstChild, contextToMount );
-	}
-	
-	if( markerNode ) {
-		parentNode.insertBefore( element, markerNode );
-	}
-	else {
-		parentNode.appendChild( element );
-	}
-	
-	if( contextToMount !== undefined ) {
-		doMount( contextToMount );
-	}
-}
-
-function doMount( context ) {
-	if( context.inDocument ) {
+export function doMount( context ) {
+	if( !context.parentContext.inDocument ) {
 		return;
 	}
 	
 	context.inDocument = true;
 	
-	for( const callback of context.mountCallbacks ) {
+	const { callbacks, subscriptions } = context.mount;
+	context.mount = null;
+	
+	for( const callback of callbacks ) {
 		const unmountCallback = callback();
 		if( typeof unmountCallback === "function" ) {
 			onUnmount( unmountCallback, context );
 		}
 	}
-	// TODO
-	context.mountCallbacks = [];
 	
-	for( const childContext of context.children.values() ) {
+	for( const [ next, observable ] of subscriptions ) {
+		context.unmount.subscriptions.push( subscribe( next, observable ) );
+	}
+	
+	for( const childContext of context.childContexts ) {
 		doMount( childContext );
 	}
 }
 
-export function unmountElement( element ) {
-	const contextToUnmount = currentMountedContext.children.get( element );
-	if( contextToUnmount !== undefined ) {
-		doUnmount( contextToUnmount );
-		currentMountedContext.children.delete( element );
+export function doUnmount( context ) {
+	if( context === rootMountedContext ) {
+		return;
 	}
-}
-
-function doUnmount( context ) {
-	for( const subscription of context.subscriptions ) {
+	
+	const { callbacks, subscriptions } = context.unmount;
+	context.unmount = null;
+	
+	for( const subscription of subscriptions ) {
 		subscription.unsubscribe();
 	}
-	context.subscriptions = [];
 
-	for( const callback of context.unmountCallbacks ) {
+	for( const callback of callbacks ) {
 		callback();
 	}
-	context.unmountCallbacks = [];
 
-	for( const childContext of context.children.values() ) {
+	for( const childContext of context.childContexts ) {
 		doUnmount( childContext );
 	}
-	context.children = new Map();
+	context.childContexts.clear();
+	
+	context.parentContext.childContexts.delete( context );
 }
-

@@ -1,4 +1,5 @@
-import { subscribeForDOM, isObservable } from "./observableUtils.js";
+import { isObservable } from "./observableUtils.js";
+import { subscribeForDOM } from "./mount.js";
 import { applyRef } from "./ref.js";
 
 export function Text( { nodeValue = "", ref }, children ) {
