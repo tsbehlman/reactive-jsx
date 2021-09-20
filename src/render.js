@@ -74,12 +74,13 @@ class ComponentNode extends ReactiveNode {
 	}
 	
 	render() {
-		this.mountContext = makeMountContext();
-		this.node = wrapMountContext( this.mountContext, () => this.factory( this.props, this.children ) )();
+		if( this.mountContext === null ) {
+			this.mountContext = makeMountContext();
+			this.node = wrapMountContext( this.mountContext, () => this.factory( this.props, this.children ) )();
+		}
 	}
 	
 	mount( parentNode, markerNode ) {
-		let firstChild = this.node.firstChild;
 		super.mount( parentNode, markerNode );
 		doMount( this.mountContext );
 	}
@@ -190,8 +191,10 @@ class ArrayNode extends FragmentNode {
 		super.render();
 		for( const item of this.array ) {
 			const reactiveNode = makeReactiveNode( item );
-			reactiveNode.render();
-			reactiveNode.mount( this.node );
+			if( reactiveNode !== undefined ) {
+				reactiveNode.render();
+				reactiveNode.mount( this.node );
+			}
 		}
 	}
 }

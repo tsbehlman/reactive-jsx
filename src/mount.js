@@ -57,7 +57,7 @@ export function wrapCurrentMountContext( callback ) {
 }
 
 export function doMount( context ) {
-	if( !context.parentContext.inDocument ) {
+	if( context.mount === null || !context.parentContext.inDocument ) {
 		return;
 	}
 	
@@ -83,10 +83,6 @@ export function doMount( context ) {
 }
 
 export function doUnmount( context ) {
-	if( context === rootMountedContext ) {
-		return;
-	}
-	
 	const { callbacks, subscriptions } = context.unmount;
 	context.unmount = null;
 	

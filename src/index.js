@@ -17,6 +17,7 @@ export function render( component, props, parentNode ) {
 	const reactiveNode = createComponent( component, props );
 	reactiveNode.render();
 	reactiveNode.mount( parentNode );
+	return () => reactiveNode.unmount();
 }
 
 export { withExtensions } from "./withExtensions.js";
