@@ -69,16 +69,21 @@ export function combineArray( combiner, sources ) {
 		const subscriptions = [];
 		const values = [];
 		
-		for( let i = 0; i < sources.length; i++ ) {
-			subscriptions[ i ] = subscribe( function combineArrayCallback( value ) {
-				if( values[ i ] === value ) {
-					return;
-				}
-				values[ i ] = value;
-				if( values.length === sources.length ) {
-					dispatch( combiner( ...values ) );
-				}
-			}, sources[ i ] );
+		if( sources.length === 0 ) {
+			dispatch( combiner() );
+		}
+		else {
+			for( let i = 0; i < sources.length; i++ ) {
+				subscriptions[ i ] = subscribe( function combineArrayCallback( value ) {
+					if( values[ i ] === value ) {
+						return;
+					}
+					values[ i ] = value;
+					if( values.length === sources.length ) {
+						dispatch( combiner( ...values ) );
+					}
+				}, sources[ i ] );
+			}
 		}
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );

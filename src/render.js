@@ -106,7 +106,7 @@ class ObservableNode extends FragmentNode {
 	constructor( observable ) {
 		super();
 		this.observable = observable;
-		this.children = [];
+		this.children = new Set();
 		this.subscription = null;
 	}
 	
@@ -122,48 +122,27 @@ class ObservableNode extends FragmentNode {
 				streamValue = [ streamValue ];
 			}
 			
-			const parentNode = this.startNode.parentNode;
+			let previousNode = this.startNode;
+			const parentNode = previousNode.parentNode;
 			
-			let newChildren = [];
-			let oldChildIndex = 0;
-			let oldReactiveNode = this.children[ oldChildIndex++ ];
+			let newChildren = new Set();
 			
-			const valueIterator = streamValue[ Symbol.iterator ]();
-			let { done, value } = valueIterator.next();
-			
-			// swap existing nodes for the new ones
-			while( !done && oldReactiveNode !== undefined ) {
-				const newReactiveNode = makeReactiveNode( value );
-				if( newReactiveNode === undefined ) {
-					// ignore
-				}
-				else if( newReactiveNode !== oldReactiveNode ) {
-					newReactiveNode.render();
-					newReactiveNode.mount( parentNode, oldReactiveNode.node );
-					newChildren.push( newReactiveNode );
-				}
-				else {
-					newChildren.push( oldReactiveNode );
-					oldReactiveNode = this.children[ oldChildIndex++ ];
-				}
-				( { done, value } = valueIterator.next() );
-			}
-	
-			// add remaining new nodes
-			while( !done ) {
+			for( const value of streamValue ) {
 				const newReactiveNode = makeReactiveNode( value );
 				if( newReactiveNode !== undefined ) {
 					newReactiveNode.render();
-					newReactiveNode.mount( parentNode, this.endNode );
-					newChildren.push( newReactiveNode );
+					if( ( newReactiveNode.startNode || newReactiveNode.node ).previousSibling !== previousNode ) {
+						newReactiveNode.mount( parentNode, previousNode.nextSibling );
+					}
+					previousNode = newReactiveNode.endNode || newReactiveNode.node || previousNode;
+					newChildren.add( newReactiveNode );
+					this.children.delete( newReactiveNode );
 				}
-				( { done, value } = valueIterator.next() );
 			}
 	
 			// remove remaining old nodes
-			while( oldReactiveNode !== undefined ) {
+			for( const oldReactiveNode of this.children ) {
 				oldReactiveNode.unmount();
-				oldReactiveNode = this.children[ oldChildIndex++ ];
 			}
 			
 			this.children = newChildren;
