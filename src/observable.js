@@ -109,4 +109,4 @@ export function switchLatest( source ) {
 	} );
 }
 
-export { isObservable, makeObservable, makeSignal } from "./observableUtils.js";
+export { isObservable, makeObservable, makeSignal, subscribe } from "./observableUtils.js";
