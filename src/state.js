@@ -1,10 +1,8 @@
 import { makeObservable } from "./observableUtils.js";
 import { passthrough } from "./utils.js";
 
-export function useSignal( initialValue ) {
+export function useSignal( initialValue, mapper = passthrough ) {
 	const [ signal, dispatch, get ] = makeObservable();
-
-	let extension = passthrough;
 
 	signal.get = get;
 
@@ -13,16 +11,8 @@ export function useSignal( initialValue ) {
 			value = value( get() );
 		}
 		
-		dispatch( extension( value ) );
+		dispatch( mapper( value ) );
 	};
-	
-	signal.extend = function( newExtension ) {
-		const oldExtension = extension;
-		extension = function( value ) {
-			return newExtension( oldExtension( value ) );
-		};
-		return signal;
-	}
 	
 	signal.toJSON = get;
 	

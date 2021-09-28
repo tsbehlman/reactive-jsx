@@ -4,7 +4,7 @@ import { useSignal } from "../src/state";
 import { map, combineArray } from "../src/observable";
 
 export default function TestComponent() {
-	const counter = useSignal( 1 ).extend( i => Math.max( 1, i ) );
+	const counter = useSignal( 1, i => Math.max( 1, i ) );
 	
 	// <button events={{ click: e => counter.set( i => i - 1 ) }}>-</button>
 	
