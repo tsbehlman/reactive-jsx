@@ -10,43 +10,39 @@ export function makeObservable( setup ) {
 	const subscribers = new Set();
 	let value;
 	let cleanup;
-
-	return [
-		{
-			[Symbol.observable]() {
-				return this;
-			},
-			subscribe( subscriber ) {
-				if( subscribers.size === 0 && setup ) {
-					cleanup = setup();
-				}
-				subscribers.add( subscriber );
-				subscriber.next( value );
-				return {
-					closed: false,
-					unsubscribe() {
-						this.closed = true;
-						subscribers.delete( subscriber );
-						if( subscribers.size === 0 && cleanup ) {
-							cleanup();
-						}
-					}
-				};
-			}
-		},
-		function dispatch( newValue ) {
-			if( value === newValue ) {
-				return;
-			}
-			value = newValue;
-			for( const subscriber of subscribers ) {
-				subscriber.next( newValue );
-			}
-		},
-		function getValue() {
-			return value;
+	
+	function dispatch( newValue ) {
+		if( value === newValue ) {
+			return;
 		}
-	];
+		value = newValue;
+		for( const subscriber of subscribers ) {
+			subscriber.next( newValue );
+		}
+	}
+
+	return {
+		[Symbol.observable]() {
+			return this;
+		},
+		subscribe( subscriber ) {
+			if( subscribers.size === 0 && setup ) {
+				cleanup = setup( dispatch );
+			}
+			subscribers.add( subscriber );
+			subscriber.next( value );
+			return {
+				closed: false,
+				unsubscribe() {
+					this.closed = true;
+					subscribers.delete( subscriber );
+					if( subscribers.size === 0 && cleanup ) {
+						cleanup();
+					}
+				}
+			};
+		}
+	};
 }
 
 export function subscribe( next, observable ) {

@@ -1,22 +1,30 @@
 import { makeObservable } from "./observableUtils.js";
-import { passthrough } from "./utils.js";
+import { noop, passthrough } from "./utils.js";
 
 export function useSignal( initialValue, mapper = passthrough ) {
-	const [ signal, dispatch, get ] = makeObservable();
+	let dispatch = noop;
+	let value = initialValue;
+	
+	const signal = makeObservable( dispatchFunction => {
+		dispatch = dispatchFunction;
+		dispatch( value );
+	} );
 
-	signal.get = get;
+	signal.get = function getValue() {
+		return value;
+	};
 
-	signal.set = function setValue( value ) {
-		if( typeof value === "function" ) {
-			value = value( get() );
+	signal.set = function setValue( newValue ) {
+		if( typeof newValue === "function" ) {
+			newValue = newValue( value );
 		}
 		
-		dispatch( mapper( value ) );
+		value = mapper( newValue );
+		
+		dispatch( value );
 	};
 	
-	signal.toJSON = get;
-	
-	dispatch( initialValue );
+	signal.toJSON = signal.get;
 
 	return signal;
 }

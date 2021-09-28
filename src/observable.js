@@ -1,7 +1,7 @@
 import { makeObservable, subscribe } from "./observableUtils.js";
 
 export function tap( sideEffect, source ) {
-	const [ sink, dispatch ] = makeObservable( function() {
+	return makeObservable( function tapSetup( dispatch ) {
 		const subscription = subscribe( function tapCallback( value ) {
 			sideEffect( value )
 			dispatch( value );
@@ -9,24 +9,20 @@ export function tap( sideEffect, source ) {
 		
 		return () => subscription.unsubscribe();
 	} );
-
-	return sink;
 }
 
 export function map( mapper, source ) {
-	const [ sink, dispatch ] = makeObservable( function() {
+	return makeObservable( function mapSetup( dispatch ) {
 		const subscription = subscribe( function mapCallback( value ) {
 			dispatch( mapper( value ) );
 		}, source );
 		
 		return () => subscription.unsubscribe();
 	} );
-	
-	return sink;
 }
 
 export function filter( filterer, source ) {
-	const [ sink, dispatch ] = makeObservable( function() {
+	return makeObservable( function filterSetup( dispatch ) {
 		const subscription = subscribe( function filterCallback( value ) {
 			if( filterer( value ) ) {
 				dispatch( value );
@@ -35,12 +31,10 @@ export function filter( filterer, source ) {
 		
 		return () => subscription.unsubscribe();
 	} );
-	
-	return sink;
 }
 
 export function sampleWith( sampler, source ) {
-	const [ sink, dispatch ] = makeObservable( function() {
+	return makeObservable( function sampleWithSetup( dispatch ) {
 		let sourceValue;
 		
 		const sourceSubscription = subscribe( function sampleCallback( value ) {
@@ -56,8 +50,6 @@ export function sampleWith( sampler, source ) {
 			samplerSubscription.unsubscribe();
 		};
 	} );
-	
-	return sink;
 }
 
 export function combine( combiner, source1, source2 ) {
@@ -65,7 +57,7 @@ export function combine( combiner, source1, source2 ) {
 }
 
 export function combineArray( combiner, sources ) {
-	const [ sink, dispatch ] = makeObservable( function() {
+	return makeObservable( function combineArraySetup( dispatch ) {
 		const subscriptions = [];
 		const values = [];
 		
@@ -88,8 +80,6 @@ export function combineArray( combiner, sources ) {
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
 	} );
-	
-	return sink;
 }
 
 export function merge( source1, source2 ) {
@@ -97,17 +87,15 @@ export function merge( source1, source2 ) {
 }
 
 export function mergeArray( sources ) {
-	const [ sink, dispatch ] = makeObservable( function() {
+	return makeObservable( function mergeArraySetup( dispatch ) {
 		const subscriptions = sources.map( source => subscribe( dispatch, source ) );
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
 	} );
-	
-	return sink;
 }
 
 export function switchLatest( source ) {
-	const [ sink, dispatch ] = makeObservable( function() {
+	return makeObservable( function switchLatestSetup( dispatch ) {
 		let currentSubscription;
 		
 		const sourceSubscription = subscribe( function switchLatestCallback( newSource ) {
@@ -119,8 +107,6 @@ export function switchLatest( source ) {
 			currentSubscription && currentSubscription.unsubscribe();
 		};
 	} );
-	
-	return sink;
 }
 
-export { isObservable } from "./observableUtils.js";
+export { isObservable, makeObservable } from "./observableUtils.js";

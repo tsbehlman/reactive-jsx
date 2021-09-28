@@ -1,7 +1,20 @@
 import { render, onMount } from "../src";
 import { useSignal } from "../src/state";
 //import { createRef } from "../src/ref";
-import { map, combineArray } from "../src/observable";
+import { map, combineArray, makeObservable } from "../src/observable";
+
+const animationFrame = makeObservable( dispatch => {
+	let currentFrame = -1;
+	
+	function frame() {
+		dispatch( Date.now() );
+		currentFrame = requestAnimationFrame( frame );
+	}
+	
+	frame();
+	
+	return () => cancelAnimationFrame( currentFrame );
+} );
 
 export default function TestComponent() {
 	const counter = useSignal( 1, i => Math.max( 1, i ) );
@@ -39,7 +52,7 @@ function Moons( { phase } ) {
 		<svg width="96px" height="48px" viewBox="0 0 2 1">
 			{ [
 				<Moon phase={ phase } position="0.5 0"/>,
-				<Moon phase={ map( phase => Math.PI - phase, phase ) } position="1.5 0"/>
+				<Moon phase={ map( phase => Math.PI - phase, phase ) } position="1.5 0"/>,
 			] }
 		</svg>
 	);
@@ -84,23 +97,12 @@ function TimerContent() {
 	
 	//const timerRef = createRef();
 	
-	const time = useSignal( "" );
+	const time = map( timestamp => formatTime( new Date( timestamp ) ), animationFrame );
 	
 	onMount( () => {
 		console.log( "timer mounted" );
-		
-		let frameRequest = -1;
-		
-		function frame() {
-			time.set( formatTime( new Date() ) );
-			frameRequest = requestAnimationFrame( frame );
-		}
-		
-		frame();
-		
 		return () => {
 			console.log( "timer unmounted" );
-			cancelAnimationFrame( frameRequest );
 		};
 	} );
 	
