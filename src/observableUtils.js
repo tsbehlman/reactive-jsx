@@ -1,3 +1,5 @@
+import { passthrough } from "./utils.js";
+
 if( Symbol.observable === undefined ) {
 	Symbol.observable = Symbol( "observable" );
 }
@@ -41,6 +43,49 @@ export function makeObservable( setup ) {
 					}
 				}
 			};
+		}
+	};
+}
+
+export function makeSignal( initialValue, mapper = passthrough ) {
+	const subscribers = new Set();
+	let value = initialValue;
+
+	return {
+		[Symbol.observable]() {
+			return this;
+		},
+		subscribe( subscriber ) {
+			subscribers.add( subscriber );
+			subscriber.next( value );
+			return {
+				closed: false,
+				unsubscribe() {
+					this.closed = true;
+					subscribers.delete( subscriber );
+				}
+			};
+		},
+		get() {
+			return value;
+		},
+		set( newValue ) {
+			if( typeof newValue === "function" ) {
+				newValue = newValue( value );
+			}
+
+			newValue = mapper( newValue );
+
+			if( value === newValue ) {
+				return;
+			}
+			value = newValue;
+			for( const subscriber of subscribers ) {
+				subscriber.next( newValue );
+			}
+		},
+		toJSON() {
+			return value;
 		}
 	};
 }

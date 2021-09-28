@@ -1,7 +1,6 @@
 import { render, onMount } from "../src";
-import { useSignal } from "../src/state";
 //import { createRef } from "../src/ref";
-import { map, combineArray, makeObservable } from "../src/observable";
+import { makeObservable, makeSignal, map, combineArray } from "../src/observable";
 
 const animationFrame = makeObservable( dispatch => {
 	let currentFrame = -1;
@@ -17,7 +16,7 @@ const animationFrame = makeObservable( dispatch => {
 } );
 
 export default function TestComponent() {
-	const counter = useSignal( 1, i => Math.max( 1, i ) );
+	const counter = makeSignal( 1, i => Math.max( 1, i ) );
 	
 	// <button events={{ click: e => counter.set( i => i - 1 ) }}>-</button>
 	
@@ -79,7 +78,7 @@ function Moon( { phase, position } ) {
 }
 
 function Timer() {
-	const showTimer = useSignal( false );
+	const showTimer = makeSignal( false );
 	
 	return (
 		<>
@@ -92,8 +91,8 @@ function Timer() {
 }
 
 function TimerContent() {
-	const bold = useSignal( false );
-	const italic = useSignal( true );
+	const bold = makeSignal( false );
+	const italic = makeSignal( true );
 	
 	//const timerRef = createRef();
 	
