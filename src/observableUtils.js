@@ -9,17 +9,17 @@ export function isObservable( object ) {
 }
 
 export function makeObservable( setup ) {
-	const subscribers = new Set();
+	const observers = new Set();
 	let value;
 	let cleanup;
 	
-	function dispatch( newValue ) {
+	function next( newValue ) {
 		if( value === newValue ) {
 			return;
 		}
 		value = newValue;
-		for( const subscriber of subscribers ) {
-			subscriber.next( newValue );
+		for( const observer of observers ) {
+			observer.next( newValue );
 		}
 	}
 
@@ -27,18 +27,18 @@ export function makeObservable( setup ) {
 		[Symbol.observable]() {
 			return this;
 		},
-		subscribe( subscriber ) {
-			if( subscribers.size === 0 && setup ) {
-				cleanup = setup( dispatch );
+		subscribe( observer ) {
+			if( observers.size === 0 && setup ) {
+				cleanup = setup( next );
 			}
-			subscribers.add( subscriber );
-			subscriber.next( value );
+			observers.add( observer );
+			observer.next( value );
 			return {
 				closed: false,
 				unsubscribe() {
 					this.closed = true;
-					subscribers.delete( subscriber );
-					if( subscribers.size === 0 && cleanup ) {
+					observers.delete( observer );
+					if( observers.size === 0 && cleanup ) {
 						cleanup();
 					}
 				}
@@ -48,21 +48,21 @@ export function makeObservable( setup ) {
 }
 
 export function makeSignal( initialValue, mapper = passthrough ) {
-	const subscribers = new Set();
+	const observers = new Set();
 	let value = initialValue;
 
 	return {
 		[Symbol.observable]() {
 			return this;
 		},
-		subscribe( subscriber ) {
-			subscribers.add( subscriber );
-			subscriber.next( value );
+		subscribe( observer ) {
+			observers.add( observer );
+			observer.next( value );
 			return {
 				closed: false,
 				unsubscribe() {
 					this.closed = true;
-					subscribers.delete( subscriber );
+					observers.delete( observer );
 				}
 			};
 		},
@@ -80,8 +80,8 @@ export function makeSignal( initialValue, mapper = passthrough ) {
 				return;
 			}
 			value = newValue;
-			for( const subscriber of subscribers ) {
-				subscriber.next( newValue );
+			for( const observer of observers ) {
+				observer.next( newValue );
 			}
 		},
 		toJSON() {
