@@ -1,10 +1,14 @@
 import { makeObservable, subscribe } from "./observableUtils.js";
 
 export function tap( sideEffect, source ) {
-	return makeObservable( function tapSetup( next ) {
-		const subscription = subscribe( function tapCallback( value ) {
-			sideEffect( value )
-			next( value );
+	return makeObservable( function tapSetup( { next, error, complete } ) {
+		const subscription = subscribe( {
+			next: function tapNext( value ) {
+				sideEffect( value )
+				next( value );
+			},
+			error,
+			complete,
 		}, source );
 		
 		return () => subscription.unsubscribe();
@@ -12,9 +16,13 @@ export function tap( sideEffect, source ) {
 }
 
 export function map( mapper, source ) {
-	return makeObservable( function mapSetup( next ) {
-		const subscription = subscribe( function mapCallback( value ) {
-			next( mapper( value ) );
+	return makeObservable( function mapSetup( { next, error, complete } ) {
+		const subscription = subscribe( {
+			next: function mapNext( value ) {
+				next( mapper( value ) );
+			},
+			error,
+			complete,
 		}, source );
 		
 		return () => subscription.unsubscribe();
@@ -22,11 +30,15 @@ export function map( mapper, source ) {
 }
 
 export function filter( filterer, source ) {
-	return makeObservable( function filterSetup( next ) {
-		const subscription = subscribe( function filterCallback( value ) {
-			if( filterer( value ) ) {
-				next( value );
-			}
+	return makeObservable( function filterSetup( { next, error, complete } ) {
+		const subscription = subscribe( {
+			next: function filterNext( value ) {
+				if( filterer( value ) ) {
+					next( value );
+				}
+			},
+			error,
+			complete,
 		}, source );
 		
 		return () => subscription.unsubscribe();
@@ -34,15 +46,23 @@ export function filter( filterer, source ) {
 }
 
 export function sampleWith( sampler, source ) {
-	return makeObservable( function sampleWithSetup( next ) {
+	return makeObservable( function sampleWithSetup( { next, error, complete } ) {
 		let sourceValue;
 		
-		const sourceSubscription = subscribe( function sampleCallback( value ) {
-			sourceValue = value;
+		const sourceSubscription = subscribe( {
+			next: function sampleNext( value ) {
+				sourceValue = value;
+			},
+			error,
+			complete,
 		}, source );
 		
-		const samplerSubscription = subscribe( function sampleWithCallback() {
-			next( sourceValue );
+		const samplerSubscription = subscribe( {
+			next: function sampleWithNext() {
+				next( sourceValue );
+			},
+			error,
+			complete,
 		}, sampler );
 		
 		return () => {
@@ -57,7 +77,7 @@ export function combine( combiner, source1, source2 ) {
 }
 
 export function combineArray( combiner, sources ) {
-	return makeObservable( function combineArraySetup( next ) {
+	return makeObservable( function combineArraySetup( { next, error, complete } ) {
 		const subscriptions = [];
 		const values = [];
 		
@@ -66,14 +86,18 @@ export function combineArray( combiner, sources ) {
 		}
 		else {
 			for( let i = 0; i < sources.length; i++ ) {
-				subscriptions[ i ] = subscribe( function combineArrayCallback( value ) {
-					if( values[ i ] === value ) {
-						return;
-					}
-					values[ i ] = value;
-					if( values.length === sources.length ) {
-						next( combiner( ...values ) );
-					}
+				subscriptions[ i ] = subscribe( {
+					next: function combineArrayNext( value ) {
+						if( values[ i ] === value ) {
+							return;
+						}
+						values[ i ] = value;
+						if( values.length === sources.length ) {
+							next( combiner( ...values ) );
+						}
+					},
+					error,
+					complete,
 				}, sources[ i ] );
 			}
 		}
@@ -87,20 +111,24 @@ export function merge( source1, source2 ) {
 }
 
 export function mergeArray( sources ) {
-	return makeObservable( function mergeArraySetup( next ) {
-		const subscriptions = sources.map( source => subscribe( next, source ) );
+	return makeObservable( function mergeArraySetup( observer ) {
+		const subscriptions = sources.map( source => subscribe( observer, source ) );
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
 	} );
 }
 
 export function switchLatest( source ) {
-	return makeObservable( function switchLatestSetup( next ) {
+	return makeObservable( function switchLatestSetup( { next, error, complete } ) {
 		let currentSubscription;
 		
-		const sourceSubscription = subscribe( function switchLatestCallback( newSource ) {
-			currentSubscription && currentSubscription.unsubscribe();
-			currentSubscription = subscribe( next, newSource );
+		const sourceSubscription = subscribe( {
+			next: function switchLatestNext( newSource ) {
+				currentSubscription && currentSubscription.unsubscribe();
+				currentSubscription = subscribe( { next, error, complete }, newSource );
+			},
+			error,
+			complete,
 		}, source );
 		
 		return () => {

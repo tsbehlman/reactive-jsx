@@ -2,11 +2,11 @@ import { render, onMount } from "../src";
 //import { createRef } from "../src/ref";
 import { makeObservable, makeSignal, map, combineArray } from "../src/observable";
 
-const animationFrame = makeObservable( dispatch => {
+const animationFrame = makeObservable( ( { next } ) => {
 	let currentFrame = -1;
 	
 	function frame() {
-		dispatch( Date.now() );
+		next( Date.now() );
 		currentFrame = requestAnimationFrame( frame );
 	}
 	
@@ -17,8 +17,6 @@ const animationFrame = makeObservable( dispatch => {
 
 export default function TestComponent() {
 	const counter = makeSignal( 1, i => Math.max( 1, i ) );
-	
-	// <button events={{ click: e => counter.set( i => i - 1 ) }}>-</button>
 	
 	return (
 		<>

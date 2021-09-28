@@ -30,7 +30,7 @@ export function onUnmount( callback, context = currentMountedContext ) {
 }
 
 export function subscribeForDOM( next, observable ) {
-	currentMountedContext.mount.subscriptions.push( [ next, observable ] );
+	currentMountedContext.mount.subscriptions.push( [ { next }, observable ] );
 }
 
 export function wrapMountContext( context, callback ) {
@@ -73,8 +73,8 @@ export function doMount( context ) {
 		}
 	}
 	
-	for( const [ next, observable ] of subscriptions ) {
-		context.unmount.subscriptions.push( subscribe( next, observable ) );
+	for( const [ observer, observable ] of subscriptions ) {
+		context.unmount.subscriptions.push( subscribe( observer, observable ) );
 	}
 	
 	for( const childContext of context.childContexts ) {
