@@ -1,6 +1,6 @@
 import { render, onMount } from "../src";
 //import { createRef } from "../src/ref";
-import { makeObservable, makeSignal, map, combineArray } from "../src/observable";
+import { makeObservable, makeSignal, map, combineArray, combine, switchLatest, fromPromise, mapError } from "../src/observable";
 
 const animationFrame = makeObservable( ( { next } ) => {
 	let currentFrame = -1;
@@ -35,6 +35,7 @@ export default function TestComponent() {
 				{ map( repeater( randomCharacter ), counter ) }
 			</code>
 			<hr/>
+			<Futurama count={ counter } />
 			<ul>
 				{ map( randomRepeater( value => (
 					<li>{ value + 1 }</li>
@@ -47,10 +48,8 @@ export default function TestComponent() {
 function Moons( { phase } ) {
 	return (
 		<svg width="96px" height="48px" viewBox="0 0 2 1">
-			{ [
-				<Moon phase={ phase } position="0.5 0"/>,
-				<Moon phase={ map( phase => Math.PI - phase, phase ) } position="1.5 0"/>,
-			] }
+			<Moon phase={ phase } position="0.5 0"/>
+			<Moon phase={ map( phase => Math.PI - phase, phase ) } position="1.5 0"/>
 		</svg>
 	);
 }
@@ -112,6 +111,38 @@ function TimerContent() {
 			<label>
 				<input type="checkbox" onchange={ toggle( italic ) } checked={ italic.get() }/> italic
 			</label>
+		</>
+	);
+}
+
+function Futurama( { count } ) {
+	const character = makeSignal( "none" );
+	const quotes = switchLatest( combine( ( character, count ) => fromPromise(
+		character !== "none"
+			? fetch( `http://futuramaapi.herokuapp.com/api/characters/${ character }/${ count }` )
+				.then( response => response.json() )
+			: Promise.reject(),
+		[]
+	), character, count ) );
+	
+	return (
+		<>
+			<select events={{ change: e => character.set( e.target.value ) }} value={ character.get() }>
+				<option value="none" selected>Select a character</option>
+				<option value="fry">Fry</option>
+				<option value="bender">Bender</option>
+			</select>
+			<ul style="min-height: 1em">
+				{ mapError(
+					error => <div>Something went wrong! Try selecting a character?</div>,
+					map(
+						quotes => quotes.map( ( { quote } ) =>
+							<li><Text nodeValue={ quote } /></li>
+						),
+						quotes
+					)
+				) }
+			</ul>
 		</>
 	);
 }

@@ -1,4 +1,5 @@
 import { makeObservable, subscribe } from "./observableUtils.js";
+import { noop } from "./utils.js";
 
 export function tap( sideEffect, source ) {
 	return makeObservable( function tapSetup( { next, error, complete } ) {
@@ -120,20 +121,43 @@ export function mergeArray( sources ) {
 
 export function switchLatest( source ) {
 	return makeObservable( function switchLatestSetup( { next, error, complete } ) {
-		let currentSubscription;
+		let currentSubscription = null;
 		
 		const sourceSubscription = subscribe( {
 			next: function switchLatestNext( newSource ) {
 				currentSubscription && currentSubscription.unsubscribe();
-				currentSubscription = subscribe( { next, error, complete }, newSource );
+				currentSubscription = subscribe( {
+					next,
+					error,
+					complete: noop,
+				}, newSource );
 			},
 			error,
 			complete,
 		}, source );
 		
-		return () => {
-			currentSubscription && currentSubscription.unsubscribe();
-		};
+		return () => currentSubscription && currentSubscription.unsubscribe();
+	} );
+}
+
+export function mapError( errorHandler, source ) {
+	return makeObservable( function catchErrorSetup( { next, complete } ) {
+		const subscription = subscribe( {
+			next,
+			error: function catchErrorHandler( error ) {
+				next( errorHandler( error ) );
+			},
+			complete,
+		}, source );
+		
+		return () => subscription.unsubscribe();
+	} );
+}
+
+export function fromPromise( promise, defaultValue ) {
+	return makeObservable( function fromPromiseSetup( { next, error, complete } ) {
+		promise.then( next, error ).finally( complete );
+		next( defaultValue );
 	} );
 }
 
