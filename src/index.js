@@ -7,9 +7,16 @@ export function template( html, wrappedContent ) {
 	return wrappedContent ? node.firstChild : node;
 };
 
-export function fragment( html ) {
+export function fragment( html, wrappedContent ) {
 	const templateElement = document.createElement( "template" );
 	templateElement.innerHTML = html;
+	if( wrappedContent ) {
+		const wrapperNode = templateElement.content.firstChild;
+		while( wrapperNode.firstChild !== null ) {
+			templateElement.content.appendChild( wrapperNode.firstChild );
+		}
+		templateElement.content.removeChild( wrapperNode );
+	}
 	return templateElement.content;
 }
 
