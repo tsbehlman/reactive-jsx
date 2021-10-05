@@ -52,7 +52,13 @@ export class Observable {
 			};
 			
 			if( observers.size === 0 && setup ) {
-				cleanup = setup( observerProxy );
+				const setupReturnValue = setup( observerProxy );
+				if( !!setupReturnValue && typeof setupReturnValue !== "function" ) {
+					cleanup = () => setupReturnValue.unsubscribe();
+				}
+				else {
+					cleanup = setupReturnValue;
+				}
 			}
 			observers.add( observer );
 			observer.next( value );
@@ -117,7 +123,7 @@ export class Signal {
 
 export function tap( sideEffect, source ) {
 	return new Observable( function tapSetup( { next, error, complete } ) {
-		const subscription = source.subscribe( {
+		return source.subscribe( {
 			next: function tapNext( value ) {
 				sideEffect( value )
 				next( value );
@@ -125,28 +131,24 @@ export function tap( sideEffect, source ) {
 			error,
 			complete,
 		} );
-		
-		return () => subscription.unsubscribe();
 	} );
 }
 
 export function map( mapper, source ) {
 	return new Observable( function mapSetup( { next, error, complete } ) {
-		const subscription = source.subscribe( {
+		return source.subscribe( {
 			next: function mapNext( value ) {
 				next( mapper( value ) );
 			},
 			error,
 			complete,
 		} );
-		
-		return () => subscription.unsubscribe();
 	} );
 }
 
 export function filter( filterer, source ) {
 	return new Observable( function filterSetup( { next, error, complete } ) {
-		const subscription = source.subscribe( {
+		return source.subscribe( {
 			next: function filterNext( value ) {
 				if( filterer( value ) ) {
 					next( value );
@@ -155,8 +157,6 @@ export function filter( filterer, source ) {
 			error,
 			complete,
 		} );
-		
-		return () => subscription.unsubscribe();
 	} );
 }
 
@@ -256,15 +256,13 @@ export function switchLatest( source ) {
 
 export function mapError( errorHandler, source ) {
 	return new Observable( function catchErrorSetup( { next, complete } ) {
-		const subscription = source.subscribe( {
+		return source.subscribe( {
 			next,
 			error: function catchErrorHandler( error ) {
 				next( errorHandler( error ) );
 			},
 			complete,
 		} );
-		
-		return () => subscription.unsubscribe();
 	} );
 }
 
