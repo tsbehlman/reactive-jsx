@@ -1,8 +1,8 @@
 import { render, onMount } from "../src";
 //import { createRef } from "../src/ref";
-import { makeObservable, makeSignal, map, combineArray, combine, switchLatest, fromPromise, mapError } from "../src/observable";
+import { Observable, Signal, map, combineArray, combine, switchLatest, fromPromise, mapError } from "../src/observable";
 
-const animationFrame = makeObservable( ( { next } ) => {
+const animationFrame = new Observable( ( { next } ) => {
 	let currentFrame = -1;
 	
 	function frame() {
@@ -16,7 +16,7 @@ const animationFrame = makeObservable( ( { next } ) => {
 } );
 
 export default function TestComponent() {
-	const counter = makeSignal( 1, i => Math.max( 1, i ) );
+	const counter = new Signal( 1, i => Math.max( 1, i ) );
 	
 	return (
 		<>
@@ -75,7 +75,7 @@ function Moon( { phase, position } ) {
 }
 
 function Timer() {
-	const showTimer = makeSignal( false );
+	const showTimer = new Signal( false );
 	
 	return (
 		<>
@@ -88,8 +88,8 @@ function Timer() {
 }
 
 function TimerContent() {
-	const bold = makeSignal( false );
-	const italic = makeSignal( true );
+	const bold = new Signal( false );
+	const italic = new Signal( true );
 	
 	//const timerRef = createRef();
 	
@@ -116,7 +116,7 @@ function TimerContent() {
 }
 
 function Futurama( { count } ) {
-	const character = makeSignal( "none" );
+	const character = new Signal( "none" );
 	const quotes = switchLatest( combine( ( character, count ) => fromPromise(
 		character !== "none"
 			? fetch( `http://futuramaapi.herokuapp.com/api/characters/${ character }/${ count }` )

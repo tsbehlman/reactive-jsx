@@ -1,38 +1,35 @@
 import "./observableUtils.js";
 import { noop, passthrough } from "./utils.js";
 
-export function makeObservable( setup ) {
-	const observers = new Set();
-	let value;
-	let cleanup;
-
-	const observerProxy = {
-		next( newValue ) {
-			if( value === newValue ) {
-				return;
+export class Observable {
+	constructor( setup ) {
+		const observers = new Set();
+		let value;
+		let cleanup;
+		
+		const observerProxy = {
+			next( newValue ) {
+				if( value === newValue ) {
+					return;
+				}
+				value = newValue;
+				for( const observer of observers ) {
+					observer.next( newValue );
+				}
+			},
+			error( error ) {
+				for( const observer of observers ) {
+					observer.error( error );
+				}
+			},
+			complete() {
+				for( const observer of observers ) {
+					observer.complete();
+				}
 			}
-			value = newValue;
-			for( const observer of observers ) {
-				observer.next( newValue );
-			}
-		},
-		error( error ) {
-			for( const observer of observers ) {
-				observer.error( error );
-			}
-		},
-		complete() {
-			for( const observer of observers ) {
-				observer.complete();
-			}
-		}
-	};
-
-	return {
-		[Symbol.observable]() {
-			return this;
-		},
-		subscribe( observer ) {
+		};
+		
+		this.subscribe = function subscribe( observer ) {
 			const subscription = {
 				closed: false,
 				unsubscribe() {
@@ -43,33 +40,34 @@ export function makeObservable( setup ) {
 					}
 				}
 			};
-
+			
 			observer.error = observer.error || function defaultError( error ) {
 				console.error( "Uncaught observable error", error );
 			};
 			observer.complete = observer.complete || function defaultComplete( error ) {
 				subscription.unsubscribe();
 			};
-
+			
 			if( observers.size === 0 && setup ) {
 				cleanup = setup( observerProxy );
 			}
 			observers.add( observer );
 			observer.next( value );
 			return subscription;
-		}
-	};
+		};
+	}
+	
+	[Symbol.observable]() {
+		return this;
+	}
 }
 
-export function makeSignal( initialValue, mapper = passthrough ) {
-	const observers = new Set();
-	let value = initialValue;
-
-	return {
-		[Symbol.observable]() {
-			return this;
-		},
-		subscribe( observer ) {
+export class Signal {
+	constructor( initialValue, mapper = passthrough ) {
+		const observers = new Set();
+		let value = initialValue;
+		
+		this.subscribe = function subscribe( observer ) {
 			if( typeof observer === "function" ) {
 				observer = { next: observer };
 			}
@@ -82,17 +80,19 @@ export function makeSignal( initialValue, mapper = passthrough ) {
 					observers.delete( observer );
 				}
 			};
-		},
-		get() {
+		};
+		
+		this.get = function get() {
 			return value;
-		},
-		set( newValue ) {
+		};
+		
+		this.set = function set( newValue ) {
 			if( typeof newValue === "function" ) {
 				newValue = newValue( value );
 			}
-
+		
 			newValue = mapper( newValue );
-
+		
 			if( value === newValue ) {
 				return;
 			}
@@ -100,15 +100,20 @@ export function makeSignal( initialValue, mapper = passthrough ) {
 			for( const observer of observers ) {
 				observer.next( newValue );
 			}
-		},
-		toJSON() {
+		};
+		
+		this.toJSON = function toJSON() {
 			return value;
-		}
-	};
+		};
+	}
+	
+	[Symbol.observable]() {
+		return this;
+	}
 }
 
 export function tap( sideEffect, source ) {
-	return makeObservable( function tapSetup( { next, error, complete } ) {
+	return new Observable( function tapSetup( { next, error, complete } ) {
 		const subscription = source.subscribe( {
 			next: function tapNext( value ) {
 				sideEffect( value )
@@ -123,7 +128,7 @@ export function tap( sideEffect, source ) {
 }
 
 export function map( mapper, source ) {
-	return makeObservable( function mapSetup( { next, error, complete } ) {
+	return new Observable( function mapSetup( { next, error, complete } ) {
 		const subscription = source.subscribe( {
 			next: function mapNext( value ) {
 				next( mapper( value ) );
@@ -137,7 +142,7 @@ export function map( mapper, source ) {
 }
 
 export function filter( filterer, source ) {
-	return makeObservable( function filterSetup( { next, error, complete } ) {
+	return new Observable( function filterSetup( { next, error, complete } ) {
 		const subscription = source.subscribe( {
 			next: function filterNext( value ) {
 				if( filterer( value ) ) {
@@ -153,7 +158,7 @@ export function filter( filterer, source ) {
 }
 
 export function sampleWith( sampler, source ) {
-	return makeObservable( function sampleWithSetup( { next, error, complete } ) {
+	return new Observable( function sampleWithSetup( { next, error, complete } ) {
 		let sourceValue;
 		
 		const sourceSubscription = source.subscribe( {
@@ -184,7 +189,7 @@ export function combine( combiner, source1, source2 ) {
 }
 
 export function combineArray( combiner, sources ) {
-	return makeObservable( function combineArraySetup( { next, error, complete } ) {
+	return new Observable( function combineArraySetup( { next, error, complete } ) {
 		const subscriptions = [];
 		const values = [];
 		
@@ -218,7 +223,7 @@ export function merge( source1, source2 ) {
 }
 
 export function mergeArray( sources ) {
-	return makeObservable( function mergeArraySetup( observer ) {
+	return new Observable( function mergeArraySetup( observer ) {
 		const subscriptions = sources.map( source => source.subscribe( observer ) );
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
@@ -226,7 +231,7 @@ export function mergeArray( sources ) {
 }
 
 export function switchLatest( source ) {
-	return makeObservable( function switchLatestSetup( { next, error, complete } ) {
+	return new Observable( function switchLatestSetup( { next, error, complete } ) {
 		let currentSubscription = null;
 		
 		const sourceSubscription = source.subscribe( {
@@ -247,7 +252,7 @@ export function switchLatest( source ) {
 }
 
 export function mapError( errorHandler, source ) {
-	return makeObservable( function catchErrorSetup( { next, complete } ) {
+	return new Observable( function catchErrorSetup( { next, complete } ) {
 		const subscription = source.subscribe( {
 			next,
 			error: function catchErrorHandler( error ) {
@@ -261,7 +266,7 @@ export function mapError( errorHandler, source ) {
 }
 
 export function fromPromise( promise, defaultValue ) {
-	return makeObservable( function fromPromiseSetup( { next, error, complete } ) {
+	return new Observable( function fromPromiseSetup( { next, error, complete } ) {
 		promise.then( next, error ).finally( complete );
 		next( defaultValue );
 	} );
