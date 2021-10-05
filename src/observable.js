@@ -1,16 +1,16 @@
-import { makeObservable, subscribe } from "./observableUtils.js";
+import { makeObservable } from "./observableUtils.js";
 import { noop } from "./utils.js";
 
 export function tap( sideEffect, source ) {
 	return makeObservable( function tapSetup( { next, error, complete } ) {
-		const subscription = subscribe( {
+		const subscription = source.subscribe( {
 			next: function tapNext( value ) {
 				sideEffect( value )
 				next( value );
 			},
 			error,
 			complete,
-		}, source );
+		} );
 		
 		return () => subscription.unsubscribe();
 	} );
@@ -18,13 +18,13 @@ export function tap( sideEffect, source ) {
 
 export function map( mapper, source ) {
 	return makeObservable( function mapSetup( { next, error, complete } ) {
-		const subscription = subscribe( {
+		const subscription = source.subscribe( {
 			next: function mapNext( value ) {
 				next( mapper( value ) );
 			},
 			error,
 			complete,
-		}, source );
+		} );
 		
 		return () => subscription.unsubscribe();
 	} );
@@ -32,7 +32,7 @@ export function map( mapper, source ) {
 
 export function filter( filterer, source ) {
 	return makeObservable( function filterSetup( { next, error, complete } ) {
-		const subscription = subscribe( {
+		const subscription = source.subscribe( {
 			next: function filterNext( value ) {
 				if( filterer( value ) ) {
 					next( value );
@@ -40,7 +40,7 @@ export function filter( filterer, source ) {
 			},
 			error,
 			complete,
-		}, source );
+		} );
 		
 		return () => subscription.unsubscribe();
 	} );
@@ -50,21 +50,21 @@ export function sampleWith( sampler, source ) {
 	return makeObservable( function sampleWithSetup( { next, error, complete } ) {
 		let sourceValue;
 		
-		const sourceSubscription = subscribe( {
+		const sourceSubscription = source.subscribe( {
 			next: function sampleNext( value ) {
 				sourceValue = value;
 			},
 			error,
 			complete,
-		}, source );
+		} );
 		
-		const samplerSubscription = subscribe( {
+		const samplerSubscription = sampler.subscribe( {
 			next: function sampleWithNext() {
 				next( sourceValue );
 			},
 			error,
 			complete,
-		}, sampler );
+		} );
 		
 		return () => {
 			sourceSubscription.unsubscribe();
@@ -87,7 +87,7 @@ export function combineArray( combiner, sources ) {
 		}
 		else {
 			for( let i = 0; i < sources.length; i++ ) {
-				subscriptions[ i ] = subscribe( {
+				subscriptions[ i ] = sources[ i ].subscribe( {
 					next: function combineArrayNext( value ) {
 						if( values[ i ] === value ) {
 							return;
@@ -99,7 +99,7 @@ export function combineArray( combiner, sources ) {
 					},
 					error,
 					complete,
-				}, sources[ i ] );
+				} );
 			}
 		}
 		
@@ -113,7 +113,7 @@ export function merge( source1, source2 ) {
 
 export function mergeArray( sources ) {
 	return makeObservable( function mergeArraySetup( observer ) {
-		const subscriptions = sources.map( source => subscribe( observer, source ) );
+		const subscriptions = sources.map( source => source.subscribe( observer ) );
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
 	} );
@@ -123,18 +123,18 @@ export function switchLatest( source ) {
 	return makeObservable( function switchLatestSetup( { next, error, complete } ) {
 		let currentSubscription = null;
 		
-		const sourceSubscription = subscribe( {
+		const sourceSubscription = source.subscribe( {
 			next: function switchLatestNext( newSource ) {
 				currentSubscription && currentSubscription.unsubscribe();
-				currentSubscription = subscribe( {
+				currentSubscription = newSource.subscribe( {
 					next,
 					error,
 					complete: noop,
-				}, newSource );
+				} );
 			},
 			error,
 			complete,
-		}, source );
+		} );
 		
 		return () => currentSubscription && currentSubscription.unsubscribe();
 	} );
@@ -142,13 +142,13 @@ export function switchLatest( source ) {
 
 export function mapError( errorHandler, source ) {
 	return makeObservable( function catchErrorSetup( { next, complete } ) {
-		const subscription = subscribe( {
+		const subscription = source.subscribe( {
 			next,
 			error: function catchErrorHandler( error ) {
 				next( errorHandler( error ) );
 			},
 			complete,
-		}, source );
+		} );
 		
 		return () => subscription.unsubscribe();
 	} );
@@ -161,4 +161,4 @@ export function fromPromise( promise, defaultValue ) {
 	} );
 }
 
-export { isObservable, makeObservable, makeSignal, subscribe } from "./observableUtils.js";
+export { isObservable, makeObservable, makeSignal } from "./observableUtils.js";

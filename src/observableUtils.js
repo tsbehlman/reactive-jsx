@@ -40,12 +40,7 @@ export function makeObservable( setup ) {
 			return this;
 		},
 		subscribe( observer ) {
-			if( observers.size === 0 && setup ) {
-				cleanup = setup( observerProxy );
-			}
-			observers.add( observer );
-			observer.next( value );
-			return {
+			const subscription = {
 				closed: false,
 				unsubscribe() {
 					this.closed = true;
@@ -55,6 +50,20 @@ export function makeObservable( setup ) {
 					}
 				}
 			};
+			
+			observer.error = observer.error || function defaultError( error ) {
+				console.error( "Uncaught observable error", error );
+			};
+			observer.complete = observer.complete || function defaultComplete( error ) {
+				subscription.unsubscribe();
+			};
+			
+			if( observers.size === 0 && setup ) {
+				cleanup = setup( observerProxy );
+			}
+			observers.add( observer );
+			observer.next( value );
+			return subscription;
 		}
 	};
 }
@@ -100,21 +109,4 @@ export function makeSignal( initialValue, mapper = passthrough ) {
 			return value;
 		}
 	};
-}
-
-export function subscribe( observer, observable ) {
-	let subscription;
-	const {
-		next = noop,
-		error = function defaultError( error ) {
-			console.error( "Uncaught observable error", error );
-		},
-		complete = function defaultComplete() {
-			subscription.unsubscribe();
-		},
-	} = observer;
-	
-	subscription = observable[Symbol.observable]().subscribe( { next, error, complete } );
-	
-	return subscription;
 }

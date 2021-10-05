@@ -1,4 +1,4 @@
-import { subscribe, isObservable } from "./observableUtils.js";
+import { isObservable } from "./observableUtils.js";
 import { makeMountContext, wrapMountContext, wrapCurrentMountContext, doMount, doUnmount, subscribeForDOM } from "./mount.js";
 import { applyRef } from "./ref.js";
 
@@ -151,9 +151,9 @@ class ObservableNode extends FragmentNode {
 	
 	mount( parentNode, markerNode ) {
 		super.mount( parentNode, markerNode );
-		this.subscription = subscribe( {
+		this.subscription = this.observable.subscribe( {
 			next: this.makeChildObserver(),
-		}, this.observable );
+		} );
 	}
 	
 	unmount() {

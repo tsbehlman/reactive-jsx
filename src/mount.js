@@ -1,5 +1,3 @@
-import { subscribe } from "./observableUtils.js";
-
 export function makeMountContext() {
 	return {
 		inDocument: false,
@@ -74,7 +72,7 @@ export function doMount( context ) {
 	}
 	
 	for( const [ observer, observable ] of subscriptions ) {
-		context.unmount.subscriptions.push( subscribe( observer, observable ) );
+		context.unmount.subscriptions.push( observable.subscribe( observer ) );
 	}
 	
 	for( const childContext of context.childContexts ) {
