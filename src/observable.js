@@ -41,6 +41,9 @@ export class Observable {
 				}
 			};
 			
+			if( typeof observer === "function" ) {
+				observer = { next: observer };
+			}
 			observer.error = observer.error || function defaultError( error ) {
 				console.error( "Uncaught observable error", error );
 			};
