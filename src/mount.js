@@ -28,7 +28,7 @@ export function onUnmount( callback, context = currentMountedContext ) {
 }
 
 export function subscribeForDOM( next, observable ) {
-	currentMountedContext.mount.subscriptions.push( [ { next }, observable ] );
+	currentMountedContext.mount.subscriptions.push( [ next, observable ] );
 }
 
 export function wrapMountContext( context, callback ) {
@@ -71,8 +71,17 @@ export function doMount( context ) {
 		}
 	}
 	
-	for( const [ observer, observable ] of subscriptions ) {
-		context.unmount.subscriptions.push( observable.subscribe( observer ) );
+	for( const [ next, observable ] of subscriptions ) {
+		const subscription = observable.subscribe( {
+			next,
+			error: function reactiveMountError() {
+				console.error( "Uncaught observable error", error );
+			},
+			complete: function reactiveMountComplete() {
+				subscription.unsubscribe();
+			}
+		} );
+		context.unmount.subscriptions.push( subscription );
 	}
 	
 	for( const childContext of context.childContexts ) {
