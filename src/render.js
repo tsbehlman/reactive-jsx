@@ -2,7 +2,7 @@ import { isObservable } from "./observableUtils.js";
 import { makeMountContext, wrapMountContext, wrapCurrentMountContext, doMount, doUnmount, subscribeForDOM } from "./mount.js";
 import { applyRef } from "./ref.js";
 
-export function mapStream( stream, setValueCallback ) {
+function mapStream( stream, setValueCallback ) {
 	if( isObservable( stream ) ) {
 		subscribeForDOM( setValueCallback, stream );
 	}
@@ -11,7 +11,7 @@ export function mapStream( stream, setValueCallback ) {
 	}
 }
 
-export function mapStreamObject( streamObj, setValueCallback ) {
+function mapStreamObject( streamObj, setValueCallback ) {
 	for( const [ key, value ] of Object.entries( streamObj ) ) {
 		if( isObservable( value ) ) {
 			subscribeForDOM( v => setValueCallback( key, v ), value );
@@ -22,7 +22,7 @@ export function mapStreamObject( streamObj, setValueCallback ) {
 	}
 }
 
-export function mapStreamObjectToTarget( streamObj, target ) {
+function mapStreamObjectToTarget( streamObj, target ) {
 	mapStreamObject( streamObj, ( key, value ) => target[ key ] = value );
 }
 

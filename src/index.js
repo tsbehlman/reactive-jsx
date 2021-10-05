@@ -29,6 +29,6 @@ export function render( component, props, parentNode ) {
 
 export { withExtensions } from "./withExtensions.js";
 export { onMount, onUnmount } from "./mount.js";
-export * from "./components.js";
-export * from "./render.js";
+export { Text } from "./components.js";
+export { createComponent, insert, assignToElement, spread, applyClassList, applyStyle, applyDataset, applyEvents } from "./render.js";
 export { applyRef } from "./ref.js";
