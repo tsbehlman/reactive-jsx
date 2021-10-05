@@ -27,7 +27,6 @@ export function render( component, props, parentNode ) {
 	return () => reactiveNode.unmount();
 }
 
-export { withExtensions } from "./withExtensions.js";
 export { onMount, onUnmount } from "./mount.js";
 export { Text } from "./components.js";
 export { createComponent, insert, assignToElement, spread, applyClassList, applyStyle, applyDataset, applyEvents } from "./render.js";
