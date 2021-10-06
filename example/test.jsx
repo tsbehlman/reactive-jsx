@@ -1,6 +1,6 @@
-import { render, onMount } from "../src";
-//import { createRef } from "../src/ref";
-import { Observable, Signal, map, combineArray, combine, switchLatest, fromPromise, mapError } from "../src/observable";
+import { render, onMount } from "reactive";
+//import { createRef } from "reactive/ref";
+import { Observable, Signal, map, combineArray, combine, switchLatest, fromPromise, mapError } from "reactive/observable";
 
 const animationFrame = new Observable( ( { next } ) => {
 	let currentFrame = -1;
