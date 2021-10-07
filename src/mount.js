@@ -1,3 +1,5 @@
+import "./observableUtils.js";
+
 export function makeMountContext() {
 	return {
 		inDocument: false,
@@ -72,7 +74,7 @@ export function doMount( context ) {
 	}
 	
 	for( const [ next, observable ] of subscriptions ) {
-		const subscription = observable.subscribe( {
+		const subscription = observable[ Symbol.observable ]().subscribe( {
 			next,
 			error: function reactiveMountError() {
 				console.error( "Uncaught observable error", error );

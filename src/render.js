@@ -152,7 +152,7 @@ class ObservableNode extends FragmentNode {
 	mount( parentNode, markerNode ) {
 		super.mount( parentNode, markerNode );
 		if( this.subscription === null ) {
-			this.subscription = this.observable.subscribe( {
+			this.subscription = this.observable[ Symbol.observable ]().subscribe( {
 				next: this.makeChildObserver(),
 				error: function observableNodeError() {
 					console.error( "Uncaught observable error", error );
