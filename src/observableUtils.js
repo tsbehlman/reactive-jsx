@@ -1,5 +1,5 @@
 if( Symbol.observable === undefined ) {
-	Symbol.observable = Symbol( "observable" );
+	Symbol.observable = Symbol.for( "observable" );
 }
 
 export function isObservable( object ) {
