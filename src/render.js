@@ -2,28 +2,19 @@ import { isObservable } from "./observableUtils.js";
 import { makeMountContext, wrapMountContext, wrapCurrentMountContext, doMount, doUnmount, subscribeForDOM } from "./mount.js";
 import { applyRef } from "./ref.js";
 
-function mapStream( stream, setValueCallback ) {
-	if( isObservable( stream ) ) {
-		subscribeForDOM( setValueCallback, stream );
-	}
-	else {
-		setValueCallback( stream );
-	}
-}
-
-function mapStreamObject( streamObj, setValueCallback ) {
-	for( const [ key, value ] of Object.entries( streamObj ) ) {
-		if( isObservable( value ) ) {
-			subscribeForDOM( v => setValueCallback( key, v ), value );
+function assignObjectToElement( object, setValueCallback ) {
+	for( const [ key, valueOrObservable ] of Object.entries( object ) ) {
+		if( isObservable( valueOrObservable ) ) {
+			subscribeForDOM( value => setValueCallback( key, value ), valueOrObservable );
 		}
 		else {
-			setValueCallback( key, value );
+			setValueCallback( key, valueOrObservable );
 		}
 	}
 }
 
-function mapStreamObjectToTarget( streamObj, target ) {
-	mapStreamObject( streamObj, ( key, value ) => target[ key ] = value );
+function assignObjectToObject( object, target ) {
+	assignObjectToElement( object, ( key, value ) => target[ key ] = value );
 }
 
 class ReactiveNode {
@@ -117,9 +108,9 @@ class ObservableNode extends FragmentNode {
 	}
 	
 	makeChildObserver() {
-		return wrapCurrentMountContext(streamValue => {
-			if( !Array.isArray( streamValue ) ) {
-				streamValue = [ streamValue ];
+		return wrapCurrentMountContext(values => {
+			if( !Array.isArray( values ) ) {
+				values = [ values ];
 			}
 			
 			let previousNode = this.startNode;
@@ -127,7 +118,7 @@ class ObservableNode extends FragmentNode {
 			
 			let newChildren = new Set();
 			
-			for( const value of streamValue ) {
+			for( const value of values ) {
 				const newReactiveNode = makeReactiveNode( value );
 				if( newReactiveNode !== undefined ) {
 					newReactiveNode.render();
@@ -225,10 +216,10 @@ export function spread( element, props, isSVG ) {
 	const { style, dataset, events, classList, ref, ...attributes } = props;
 	
 	if( isSVG ) {
-		mapStreamObject( attributes, ( key, value ) => element.setAttribute( key, value ) );
+		assignObjectToElement( attributes, ( key, value ) => element.setAttribute( key, value ) );
 	}
 	else {
-		mapStreamObjectToTarget( attributes, element );
+		assignObjectToObject( attributes, element );
 	}
 	
 	style && applyStyle( element, style );
@@ -243,7 +234,7 @@ export function spread( element, props, isSVG ) {
 }
 
 export function applyClassList( element, classList ) {
-	mapStreamObject( classList, function toggleClassName( className, shouldAdd ) {
+	assignObjectToElement( classList, function toggleClassName( className, shouldAdd ) {
 		if( !!shouldAdd ) {
 			element.classList.add( className );
 		}
@@ -258,12 +249,12 @@ export function applyStyle( element, style ) {
 		element.style.cssText = style;
 	}
 	else {
-		mapStreamObjectToTarget( style, element.style );
+		assignObjectToObject( style, element.style );
 	}
 }
 
 export function applyDataset( element, dataset ) {
-	mapStreamObjectToTarget( dataset, element.dataset );
+	assignObjectToObject( dataset, element.dataset );
 }
 
 export function applyEvents( element, events ) {
