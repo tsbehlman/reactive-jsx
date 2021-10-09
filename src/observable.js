@@ -200,21 +200,26 @@ export function combineArray( combiner, sources ) {
 			next( combiner() );
 		}
 		else {
-			for( let i = 0; i < sources.length; i++ ) {
-				subscriptions[ i ] = sources[ i ].subscribe( {
+			sources.forEach( ( value, index ) => {
+				subscriptions[ index ] = sources[ index ].subscribe( {
 					next: function combineArrayNext( value ) {
-						if( values[ i ] === value ) {
+						if( values[ index ] === value ) {
 							return;
 						}
-						values[ i ] = value;
+						values[ index ] = value;
 						if( values.length === sources.length ) {
 							next( combiner( ...values ) );
 						}
 					},
 					error,
-					complete,
+					complete: function combineArrayComplete() {
+						subscriptions[ index ].unsubscribe();
+						if( subscriptions.every( subscription => subscription.closed ) ) {
+							complete();
+						}
+					},
 				} );
-			}
+			} );
 		}
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
@@ -226,8 +231,17 @@ export function merge( source1, source2 ) {
 }
 
 export function mergeArray( sources ) {
-	return new Observable( function mergeArraySetup( observer ) {
-		const subscriptions = sources.map( source => source.subscribe( observer ) );
+	return new Observable( function mergeArraySetup( { next, error, complete } ) {
+		const subscriptions = sources.map( ( source, index ) => source.subscribe( {
+			next,
+			error,
+			complete: function mergeArrayComplete() {
+				subscriptions[ index ].unsubscribe();
+				if( subscriptions.every( subscription => subscription.closed ) ) {
+					complete();
+				}
+			},
+		} ) );
 		
 		return () => subscriptions.forEach( subscription => subscription.unsubscribe() );
 	} );
