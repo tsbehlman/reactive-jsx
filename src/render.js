@@ -27,15 +27,21 @@ class ReactiveNode {
 	render() {}
 	
 	mount( parentNode, markerNode ) {
-		if( this.node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ) {
-			this.startNode = this.node.firstChild;
-			this.endNode = this.node.lastChild;
-		}
-		if( markerNode ) {
-			parentNode.insertBefore( this.node, markerNode );
+		if( isComponentNode( this.node ) ) {
+			this.node.render();
+			this.node.mount( parentNode, markerNode );
 		}
 		else {
-			parentNode.appendChild( this.node );
+			if( this.node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ) {
+				this.startNode = this.node.firstChild;
+				this.endNode = this.node.lastChild;
+			}
+			if( markerNode ) {
+				parentNode.insertBefore( this.node, markerNode );
+			}
+			else {
+				parentNode.appendChild( this.node );
+			}
 		}
 	}
 	
