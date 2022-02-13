@@ -1,4 +1,4 @@
-import "./observableUtils.js";
+import { isObservable } from "./observableUtils.js";
 import { noop, passthrough } from "./utils.js";
 
 export class Observable {
@@ -121,9 +121,46 @@ export class Signal {
 	}
 }
 
+export class Just {
+	constructor( value ) {
+		this.value = value;
+	}
+	
+	[Symbol.observable]() {
+		return this;
+	}
+	
+	subscribe( observer ) {
+		if( typeof observer === "function" ) {
+			observer = { next: observer };
+		}
+		else {
+			observer.next( this.value );
+			observer.complete();
+		}
+		return {
+			closed: true,
+			unsubscribe: noop
+		};
+	}
+	
+	toJSON() {
+		return value;
+	}
+}
+
+export function wrapObservable( value ) {
+	if( isObservable( value ) ) {
+		return value;
+	}
+	else {
+		return new Just( value );
+	}
+}
+
 export function tap( sideEffect, source ) {
 	return new Observable( function tapSetup( { next, error, complete } ) {
-		return source.subscribe( {
+		return wrapObservable( source ).subscribe( {
 			next: function tapNext( value ) {
 				sideEffect( value )
 				next( value );
@@ -136,7 +173,7 @@ export function tap( sideEffect, source ) {
 
 export function map( mapper, source ) {
 	return new Observable( function mapSetup( { next, error, complete } ) {
-		return source.subscribe( {
+		return wrapObservable( source ).subscribe( {
 			next: function mapNext( value ) {
 				next( mapper( value ) );
 			},
@@ -148,7 +185,7 @@ export function map( mapper, source ) {
 
 export function filter( filterer, source ) {
 	return new Observable( function filterSetup( { next, error, complete } ) {
-		return source.subscribe( {
+		return wrapObservable( source ).subscribe( {
 			next: function filterNext( value ) {
 				if( filterer( value ) ) {
 					next( value );
@@ -164,7 +201,7 @@ export function sampleWith( sampler, source ) {
 	return new Observable( function sampleWithSetup( { next, error, complete } ) {
 		let sourceValue;
 		
-		const sourceSubscription = source.subscribe( {
+		const sourceSubscription = wrapObservable( source ).subscribe( {
 			next: function sampleNext( value ) {
 				sourceValue = value;
 			},
@@ -172,7 +209,7 @@ export function sampleWith( sampler, source ) {
 			complete,
 		} );
 		
-		const samplerSubscription = sampler.subscribe( {
+		const samplerSubscription = wrapObservable( sampler ).subscribe( {
 			next: function sampleWithNext() {
 				next( sourceValue );
 			},
@@ -200,8 +237,8 @@ export function combineArray( combiner, sources ) {
 			next( combiner() );
 		}
 		else {
-			sources.forEach( ( value, index ) => {
-				subscriptions[ index ] = sources[ index ].subscribe( {
+			sources.forEach( ( source, index ) => {
+				subscriptions[ index ] = wrapObservable( source ).subscribe( {
 					next: function combineArrayNext( value ) {
 						if( values[ index ] === value ) {
 							return;
@@ -232,7 +269,7 @@ export function merge( source1, source2 ) {
 
 export function mergeArray( sources ) {
 	return new Observable( function mergeArraySetup( { next, error, complete } ) {
-		const subscriptions = sources.map( ( source, index ) => source.subscribe( {
+		const subscriptions = sources.map( ( source, index ) => wrapObservable( source ).subscribe( {
 			next,
 			error,
 			complete: function mergeArrayComplete() {
@@ -251,7 +288,7 @@ export function switchLatest( source ) {
 	return new Observable( function switchLatestSetup( { next, error, complete } ) {
 		let currentSubscription = null;
 		
-		const sourceSubscription = source.subscribe( {
+		const sourceSubscription = wrapObservable( source ).subscribe( {
 			next: function switchLatestNext( newSource ) {
 				currentSubscription && currentSubscription.unsubscribe();
 				currentSubscription = newSource.subscribe( {
@@ -270,7 +307,7 @@ export function switchLatest( source ) {
 
 export function mapError( errorHandler, source ) {
 	return new Observable( function catchErrorSetup( { next, complete } ) {
-		return source.subscribe( {
+		return wrapObservable( source ).subscribe( {
 			next,
 			error: function catchErrorHandler( error ) {
 				next( errorHandler( error ) );
