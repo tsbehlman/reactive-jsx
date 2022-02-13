@@ -324,4 +324,17 @@ export function fromPromise( promise, defaultValue ) {
 	} );
 }
 
+export function switchLatestPromise( source, defaultValue ) {
+	return new Observable( function switchLatestSetup( { next, error, complete } ) {
+		next( defaultValue );
+		return wrapObservable( source ).subscribe( {
+			next: function switchLatestNext( promise ) {
+				promise.then( next, error );
+			},
+			error,
+			complete,
+		} );
+	} );
+}
+
 export { isObservable } from "./observableUtils.js";
