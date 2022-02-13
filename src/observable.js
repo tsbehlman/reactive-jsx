@@ -47,7 +47,7 @@ export class Observable {
 			observer.error = observer.error || function defaultError( error ) {
 				console.error( "Uncaught observable error", error );
 			};
-			observer.complete = observer.complete || function defaultComplete( error ) {
+			observer.complete = observer.complete || function defaultComplete() {
 				subscription.unsubscribe();
 			};
 			

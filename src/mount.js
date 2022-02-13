@@ -76,7 +76,7 @@ export function doMount( context ) {
 	for( const [ next, observable ] of subscriptions ) {
 		const subscription = observable[ Symbol.observable ]().subscribe( {
 			next,
-			error: function reactiveMountError() {
+			error: function reactiveMountError( error ) {
 				console.error( "Uncaught observable error", error );
 			},
 			complete: function reactiveMountComplete() {

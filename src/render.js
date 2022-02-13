@@ -151,7 +151,7 @@ class ObservableNode extends FragmentNode {
 		if( this.subscription === null ) {
 			this.subscription = this.observable[ Symbol.observable ]().subscribe( {
 				next: this.makeChildObserver(),
-				error: function observableNodeError() {
+				error: function observableNodeError( error ) {
 					console.error( "Uncaught observable error", error );
 				},
 				complete: () => {
