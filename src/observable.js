@@ -250,7 +250,6 @@ export function combineArray( combiner, sources ) {
 					},
 					error,
 					complete: function combineArrayComplete() {
-						subscriptions[ index ].unsubscribe();
 						if( subscriptions.every( subscription => subscription.closed ) ) {
 							complete();
 						}
@@ -273,7 +272,6 @@ export function mergeArray( sources ) {
 			next,
 			error,
 			complete: function mergeArrayComplete() {
-				subscriptions[ index ].unsubscribe();
 				if( subscriptions.every( subscription => subscription.closed ) ) {
 					complete();
 				}
