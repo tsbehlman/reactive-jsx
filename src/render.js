@@ -78,13 +78,17 @@ class ComponentNode extends ReactiveNode {
 	}
 	
 	mount( parentNode, markerNode ) {
-		super.mount( parentNode, markerNode );
-		doMount( this.mountContext );
+		if( this.node ) {
+			super.mount( parentNode, markerNode );
+			doMount( this.mountContext );
+		}
 	}
 	
 	unmount() {
-		super.unmount();
-		doUnmount( this.mountContext );
+		if( this.node ) {
+			super.unmount();
+			doUnmount( this.mountContext );
+		}
 	}
 }
 
