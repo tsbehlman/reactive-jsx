@@ -80,7 +80,8 @@ export function doMount( context ) {
 				console.error( "Uncaught observable error", error );
 			},
 			complete: function reactiveMountComplete() {
-				subscription.unsubscribe();
+				// Some observables complete during the subscription process
+				Promise.resolve().then(() => subscription.unsubscribe());
 			}
 		} );
 		context.unmount.subscriptions.push( subscription );
