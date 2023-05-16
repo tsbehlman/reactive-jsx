@@ -1,4 +1,4 @@
-import "./observableUtils.js";
+import { wrapObservable } from "./observableUtils.js";
 
 export function makeMountContext() {
 	return {
@@ -30,7 +30,7 @@ export function onUnmount( callback, context = currentMountedContext ) {
 }
 
 export function subscribeForDOM( next, observable ) {
-	currentMountedContext.mount.subscriptions.push( [ next, observable ] );
+	currentMountedContext.mount.subscriptions.push( [ next, wrapObservable( observable ) ] );
 }
 
 export function wrapMountContext( context, callback ) {

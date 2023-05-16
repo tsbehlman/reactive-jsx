@@ -27,7 +27,7 @@ export function render( component, props, parentNode ) {
 	return () => reactiveNode.unmount();
 }
 
-export { onMount, onUnmount } from "./mount.js";
+export { onMount, onUnmount, subscribeForDOM as subscribe } from "./mount.js";
 export { Text } from "./components.js";
 export { createComponent, insert, assignToElement, spread, applyClassList, applyStyle, applyDataset, applyEvents } from "./render.js";
 export { applyRef } from "./ref.js";
