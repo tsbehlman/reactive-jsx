@@ -74,7 +74,15 @@ export function combine( combiner, source1, source2 ) {
 export function combineArray( combiner, sources ) {
 	return new Observable( function combineArraySetup( { next, error, complete } ) {
 		const subscriptions = [];
-		const values = [];
+		const values = new Array( sources.length );
+		
+		let isInitialized = false;
+		let nextPromise;
+		
+		function combineAndCallNext() {
+			next( combiner( ...values ) );
+			nextPromise = undefined;
+		}
 		
 		if( sources.length === 0 ) {
 			next( combiner() );
@@ -83,12 +91,16 @@ export function combineArray( combiner, sources ) {
 			sources.forEach( ( source, index ) => {
 				subscriptions[ index ] = wrapObservable( source ).subscribe( {
 					next: function combineArrayNext( value ) {
-						if( values[ index ] === value ) {
+						if( isInitialized && values[ index ] === value ) {
 							return;
 						}
 						values[ index ] = value;
-						if( values.length === sources.length ) {
-							next( combiner( ...values ) );
+						if( !isInitialized && Object.values( values ).length === sources.length ) {
+							isInitialized = true;
+							combineAndCallNext();
+						}
+						else if( isInitialized && nextPromise === undefined ) {
+							nextPromise = Promise.resolve().then( combineAndCallNext );
 						}
 					},
 					error,
