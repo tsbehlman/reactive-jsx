@@ -1,4 +1,4 @@
-import { noop, passthrough } from "./utils.js";
+import { passthrough } from "./utils.js";
 
 if( Symbol.observable === undefined ) {
 	Symbol.observable = Symbol.for( "observable" );
@@ -9,68 +9,67 @@ export function isObservable( object ) {
 }
 
 export class Observable {
+	#observers = new Set();
+	#setup;
+	#value;
+	#cleanup;
+
+	#observerProxy = {
+		next: ( newValue ) => {
+			if( this.#value === newValue ) {
+				return;
+			}
+			this.#value = newValue;
+			for( const observer of this.#observers ) {
+				observer.next( newValue );
+			}
+		},
+		error: ( error ) => {
+			for( const observer of this.#observers ) {
+				observer.error( error );
+			}
+		},
+		complete: () => {
+			for( const observer of this.#observers ) {
+				observer.complete();
+			}
+		}
+	};
+
 	constructor( setup ) {
-		const observers = new Set();
-		let value;
-		let cleanup;
+		this.#setup = setup;
+	}
+	
+	subscribe( observer ) {
+		if( typeof observer === "function" ) {
+			observer = { next: observer };
+		}
 
-		const observerProxy = {
-			next( newValue ) {
-				if( value === newValue ) {
-					return;
-				}
-				value = newValue;
-				for( const observer of observers ) {
-					observer.next( newValue );
-				}
-			},
-			error( error ) {
-				for( const observer of observers ) {
-					observer.error( error );
-				}
-			},
-			complete() {
-				for( const observer of observers ) {
-					observer.complete();
-				}
+		const subscription = new Subscription(() => {
+			this.#observers.delete( observer );
+			if( this.#observers.size === 0 && this.#cleanup ) {
+				this.#cleanup();
 			}
+		});
+		observer.error = observer.error || function defaultError( error ) {
+			console.error( "Uncaught observable error", error );
+		};
+		observer.complete = observer.complete || function defaultComplete() {
+			subscription.unsubscribe();
 		};
 
-		this.subscribe = function subscribe( observer ) {
-			const subscription = {
-				closed: false,
-				unsubscribe() {
-					this.closed = true;
-					observers.delete( observer );
-					if( observers.size === 0 && cleanup ) {
-						cleanup();
-					}
-				}
-			};
-
-			if( typeof observer === "function" ) {
-				observer = { next: observer };
+		if( this.#observers.size === 0 && this.#setup ) {
+			const setupReturnValue = this.#setup( this.#observerProxy );
+			if( !!setupReturnValue && typeof setupReturnValue !== "function" ) {
+				this.#cleanup = () => setupReturnValue.unsubscribe();
 			}
-			observer.error = observer.error || function defaultError( error ) {
-				console.error( "Uncaught observable error", error );
-			};
-			observer.complete = observer.complete || function defaultComplete() {
-				subscription.unsubscribe();
-			};
-
-			if( observers.size === 0 && setup ) {
-				const setupReturnValue = setup( observerProxy );
-				if( !!setupReturnValue && typeof setupReturnValue !== "function" ) {
-					cleanup = () => setupReturnValue.unsubscribe();
-				}
-				else {
-					cleanup = setupReturnValue;
-				}
+			else {
+				this.#cleanup = setupReturnValue;
 			}
-			observers.add( observer );
-			observer.next( value );
-			return subscription;
-		};
+		}
+		this.#observers.add( observer );
+		observer.next( this.#value );
+		return subscription;
 	}
 
 	[Symbol.observable]() {
@@ -79,52 +78,52 @@ export class Observable {
 }
 
 export class Signal {
+	#observers = new Set();
+	#value;
+	#mapper;
+
 	constructor( initialValue, mapper = passthrough ) {
-		const observers = new Set();
-		let value = initialValue;
+		this.#value = initialValue;
+		this.#mapper = mapper;
+	}
+	
+	subscribe( observer ) {
+		if( typeof observer === "function" ) {
+			observer = { next: observer };
+		}
+		this.#observers.add( observer );
+		observer.next( this.#value );
+		return new Subscription(() => {
+			this.#observers.delete( observer );
+		});
+	}
+	
+	get() {
+		return this.#value;
+	}
+	
+	set( newValue ) {
+		if( typeof newValue === "function" ) {
+			newValue = newValue( this.#value );
+		}
 
-		this.subscribe = function subscribe( observer ) {
-			if( typeof observer === "function" ) {
-				observer = { next: observer };
-			}
-			observers.add( observer );
-			observer.next( value );
-			return {
-				closed: false,
-				unsubscribe() {
-					this.closed = true;
-					observers.delete( observer );
-				}
-			};
-		};
+		newValue = this.#mapper( newValue );
 
-		this.get = function get() {
-			return value;
-		};
-
-		this.set = function set( newValue ) {
-			if( typeof newValue === "function" ) {
-				newValue = newValue( value );
-			}
-
-			newValue = mapper( newValue );
-
-			if( value === newValue ) {
-				return;
-			}
-			value = newValue;
-			for( const observer of observers ) {
-				observer.next( newValue );
-			}
-		};
-
-		this.toJSON = function toJSON() {
-			return value;
-		};
+		if( this.#value === newValue ) {
+			return;
+		}
+		this.#value = newValue;
+		for( const observer of this.#observers ) {
+			observer.next( newValue );
+		}
 	}
 
 	[Symbol.observable]() {
 		return this;
+	}
+	
+	toJSON() {
+		return this.#value;
 	}
 }
 
@@ -139,20 +138,36 @@ export class Just {
 
 	subscribe( observer ) {
 		if( typeof observer === "function" ) {
-			observer = { next: observer };
+			observer( this.value );
 		}
 		else {
 			observer.next( this.value );
 			observer.complete();
 		}
-		return {
-			closed: true,
-			unsubscribe: noop
-		};
+		const subscription = new Subscription();
+		subscription.unsubscribe();
+		return subscription;
 	}
 
 	toJSON() {
 		return value;
+	}
+}
+
+export class Subscription {
+	closed = false;
+	#cleanup = undefined;
+	
+	constructor(cleanup) {
+		this.#cleanup = cleanup;
+	}
+	
+	unsubscribe() {
+		this.closed = true;
+		if (this.#cleanup) {
+			this.#cleanup();
+			this.#cleanup = undefined;
+		}
 	}
 }
 
