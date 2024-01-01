@@ -60,10 +60,7 @@ export class Observable {
 
 		if( this.#observers.size === 0 && this.#setup ) {
 			const setupReturnValue = this.#setup( this.#observerProxy );
-			if( !!setupReturnValue && typeof setupReturnValue !== "function" ) {
-				this.#cleanup = () => setupReturnValue.unsubscribe();
-			}
-			else {
+			if( typeof setupReturnValue === "function" ) {
 				this.#cleanup = setupReturnValue;
 			}
 		}

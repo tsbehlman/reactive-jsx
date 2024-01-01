@@ -3,7 +3,7 @@ import { noop, passthrough } from "./utils.js";
 
 export function tap( sideEffect, source ) {
 	return new Observable( function tapSetup( { next, error, complete } ) {
-		return wrapObservable( source ).subscribe( {
+		const subscription = wrapObservable( source ).subscribe( {
 			next: function tapNext( value ) {
 				sideEffect( value )
 				next( value );
@@ -11,24 +11,26 @@ export function tap( sideEffect, source ) {
 			error,
 			complete,
 		} );
+		return () => subscription.unsubscribe();
 	} );
 }
 
 export function map( mapper, source ) {
 	return new Observable( function mapSetup( { next, error, complete } ) {
-		return wrapObservable( source ).subscribe( {
+		const subscription = wrapObservable( source ).subscribe( {
 			next: function mapNext( value ) {
 				next( mapper( value ) );
 			},
 			error,
 			complete,
 		} );
+		return () => subscription.unsubscribe();
 	} );
 }
 
 export function filter( filterer, source ) {
 	return new Observable( function filterSetup( { next, error, complete } ) {
-		return wrapObservable( source ).subscribe( {
+		const subscription = wrapObservable( source ).subscribe( {
 			next: function filterNext( value ) {
 				if( filterer( value ) ) {
 					next( value );
@@ -37,6 +39,7 @@ export function filter( filterer, source ) {
 			error,
 			complete,
 		} );
+		return () => subscription.unsubscribe();
 	} );
 }
 
@@ -154,19 +157,23 @@ export function switchLatest( source ) {
 			complete,
 		} );
 		
-		return () => currentSubscription && currentSubscription.unsubscribe();
+		return () => {
+			sourceSubscription.unsubscribe();
+			currentSubscription && currentSubscription.unsubscribe();
+		};
 	} );
 }
 
 export function mapError( errorHandler, source ) {
 	return new Observable( function catchErrorSetup( { next, complete } ) {
-		return wrapObservable( source ).subscribe( {
+		const subscription = wrapObservable( source ).subscribe( {
 			next,
 			error: function catchErrorHandler( error ) {
 				next( errorHandler( error ) );
 			},
 			complete,
 		} );
+		return () => subscription.unsubscribe();
 	} );
 }
 
@@ -180,13 +187,14 @@ export function fromPromise( promise, defaultValue ) {
 export function switchLatestPromise( source, defaultValue ) {
 	return new Observable( function switchLatestSetup( { next, error, complete } ) {
 		next( defaultValue );
-		return wrapObservable( source ).subscribe( {
+		const subscription = wrapObservable( source ).subscribe( {
 			next: function switchLatestNext( promise ) {
 				promise.then( next, error );
 			},
 			error,
 			complete,
 		} );
+		return () => subscription.unsubscribe();
 	} );
 }
 
