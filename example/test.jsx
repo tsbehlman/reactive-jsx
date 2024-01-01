@@ -16,16 +16,20 @@ const animationFrame = new Observable( ( { next } ) => {
 } );
 
 export default function TestComponent() {
-	const counter = new Signal( 1, i => Math.max( 1, i ) );
+	const counter = new Signal( 1 );
+	
+	function updateCounter( updater ) {
+		counter.set( value => Math.max( 1, updater( value ) ) );
+	}
 	
 	return (
 		<>
-			<button onclick={ e => counter.set( i => i - 1 ) }>-</button>
+			<button onclick={ e => updateCounter( i => i - 1 ) }>-</button>
 			<code className="counter-label" dataset={{ content: counter }}>
 				<Text nodeValue={ counter }/>
 			</code>
-			<button onclick={ e => counter.set( i => i + 1 ) }>+</button>
-			<button onclick={ e => counter.set( i => 1 ) }>Reset</button>
+			<button onclick={ e => updateCounter( i => i + 1 ) }>+</button>
+			<button onclick={ e => updateCounter( i => 1 ) }>Reset</button>
 			<hr/>
 			<Timer />
 			<hr/>

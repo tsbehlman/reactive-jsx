@@ -1,5 +1,3 @@
-import { passthrough } from "./utils.js";
-
 if( Symbol.observable === undefined ) {
 	Symbol.observable = Symbol.for( "observable" );
 }
@@ -77,11 +75,9 @@ export class Observable {
 export class Signal {
 	#observers = new Set();
 	#value;
-	#mapper;
 
-	constructor( initialValue, mapper = passthrough ) {
+	constructor( initialValue ) {
 		this.#value = initialValue;
-		this.#mapper = mapper;
 	}
 	
 	subscribe( observer ) {
@@ -103,8 +99,6 @@ export class Signal {
 		if( typeof newValue === "function" ) {
 			newValue = newValue( this.#value );
 		}
-
-		newValue = this.#mapper( newValue );
 
 		if( this.#value === newValue ) {
 			return;
