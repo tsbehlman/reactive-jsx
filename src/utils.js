@@ -1,5 +1,5 @@
-export const noop = function() {};
+export function noop() {}
 
-export const passthrough = function( value ) {
-	return value;
-};
+export function passthrough(value) {
+    return value;
+}
